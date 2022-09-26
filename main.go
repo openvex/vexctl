@@ -5,6 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 
 package main
 
-func main() {
+import (
+	"chainguard.dev/mrclean/internal/cmd"
+)
 
+func main() {
+	cmd.Execute()
 }

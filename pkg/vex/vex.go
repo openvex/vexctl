@@ -1,18 +1,18 @@
 /*
-Copyright 2021 Chainguard, Inc.
+Copyright 2022 Chainguard, Inc.
 SPDX-License-Identifier: Apache-2.0
 */
 package vex
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io"
 	"os"
-	"path/filepath"
+	"sort"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -40,7 +40,7 @@ const (
 
 type VEX struct {
 	Metadata
-	Vulnerabilities []Statement `json:"vulnerabilities"`
+	Statements []Statement `json:"statements"`
 }
 
 type Metadata struct {
@@ -52,7 +52,7 @@ type Metadata struct {
 	Timestamp          time.Time `json:"timestamp"`
 }
 
-// TypeStatement
+// Statement
 type Statement struct {
 	Vulnerability   string                   `json:"vulnerability"`
 	Status          Status                   `json:"impact"`
@@ -61,6 +61,7 @@ type Statement struct {
 	References      []VulnerabilityReference `json:"references,omitempty"`       // Optional list
 }
 
+// VulnerabilityReference captures other identifier assinged to the CVE
 type VulnerabilityReference struct {
 	RefType   string `json:"type"` // URL, OSV, FEDORA, etc
 	Reference string `reference:"ref"`
@@ -73,38 +74,64 @@ func New() VEX {
 			ProductIdentifiers: []string{},
 			Timestamp:          time.Now(),
 		},
-		Vulnerabilities: []Statement{},
+		Statements: []Statement{},
 	}
 }
 
-// Load loads a VEX document from disk
-func Load(path string) (*VEX, error) {
-	if filepath.Ext("path") == ".yaml" {
-		return LoadYAML(path)
-	}
-	return nil, errors.New("file format not recognized")
-}
-
-func LoadYAML(path string) (*VEX, error) {
+func OpenYAML(path string) (*VEX, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("opening yaml file: %w", err)
 	}
 	vexDoc := New()
-	if err := yaml.Unmarshal(data, vexDoc); err != nil {
+	if err := yaml.Unmarshal(data, &vexDoc); err != nil {
 		return nil, fmt.Errorf("unmarshalling vex data: %w", err)
 	}
 	return &vexDoc, nil
 }
 
-func (v *VEX) ToJSON() ([]byte, error) {
-	var b bytes.Buffer
-	enc := json.NewEncoder(&b)
+// OpenJSON opens a vex file in json format
+func OpenJSON(path string) (*VEX, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("opening yaml file: %w", err)
+	}
+	vexDoc := New()
+	if err := json.Unmarshal(data, &vexDoc); err != nil {
+		return nil, fmt.Errorf("unmarshalling vex data: %w", err)
+	}
+	return &vexDoc, nil
+}
+
+// ToJSON serializes the VEX document to JSON and writes it to the passed writer
+func (vexDoc *VEX) ToJSON(w io.Writer) error {
+	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	enc.SetEscapeHTML(false)
 
-	if err := enc.Encode(v); err != nil {
-		return nil, fmt.Errorf("encoding vex document: %w", err)
+	if err := enc.Encode(vexDoc); err != nil {
+		return fmt.Errorf("encoding vex document: %w", err)
 	}
-	return b.Bytes(), nil
+	return nil
+}
+
+// StatementFromID Returns a statement for a given vulnerability if there is one
+func (vexDoc *VEX) StatementFromID(id string) *Statement {
+	for _, statement := range vexDoc.Statements {
+		if statement.Vulnerability == id {
+			logrus.Infof("VEX doc contains statement for CVE %s", id)
+			return &statement
+		}
+	}
+	return nil
+}
+
+// Sort sorts a bunch of documents based on their date. VEXes should
+// be applied sequentially in chronogical order as they capture knowledge about an
+// artifact as it changes over time.
+func Sort(docs []*VEX) []*VEX {
+	sort.Slice(docs, func(i, j int) bool {
+		return docs[i].Timestamp.Before(docs[j].Timestamp)
+	})
+	return docs
 }

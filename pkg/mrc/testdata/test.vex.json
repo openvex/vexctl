@@ -1,0 +1,19 @@
+{
+  "id": "",
+  "author": "Chainguard",
+  "role": "author",
+  "timestamp": "2022-08-29T17:48:53.697543267-05:00",
+  "statements": [
+    {
+    "vulnerability": "CVE-2009-4487",
+    "impact": "not_affected",
+    "justification": "vulnerable_code_not_in_execute_path",
+    "action_statement": "Affected library function not called"
+    },
+    {
+    "vulnerability": "CVE-2021-44228",
+    "impact": "affected",
+    "action_statement": "Customers are advised to upgrade"
+    }
+  ]
+}
