@@ -13,7 +13,7 @@ import (
 )
 
 type MRC struct {
-	impl    MRCImplementation
+	impl    Implementation
 	Options Options
 }
 

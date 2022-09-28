@@ -25,6 +25,4 @@ func TestVexReport(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, newReport.Runs, 1)
 	require.Len(t, newReport.Runs[0].Results, 122)
-
-	// mrclean := mrc.Metadata
 }
