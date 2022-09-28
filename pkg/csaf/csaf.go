@@ -14,11 +14,13 @@ type CSAF struct {
 }
 
 type DocumentMetadata struct {
-	Title    string `json:"title"`
-	Tracking struct {
-		ID                 string    `json:"id"`
-		CurrentReleaseDate time.Time `json:"current_release_date"`
-	} `json:"tracking"`
+	Title    string   `json:"title"`
+	Tracking Tracking `json:"tracking"`
+}
+
+type Tracking struct {
+	ID                 string    `json:"id"`
+	CurrentReleaseDate time.Time `json:"current_release_date"`
 }
 
 type Vulnerability struct {
