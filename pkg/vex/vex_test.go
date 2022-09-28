@@ -24,4 +24,5 @@ func TestLoadCSAF(t *testing.T) {
 	require.Len(t, vexDoc.Statements, 1)
 	require.Equal(t, vexDoc.Statements[0].Vulnerability, "CVE-2009-4487")
 	require.Equal(t, vexDoc.Statements[0].Status, StatusNotAffected)
+	require.Equal(t, vexDoc.Metadata.ID, "2022-EVD-UC-01-NA-001")
 }

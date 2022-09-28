@@ -18,8 +18,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Status string
-type Justification string
+type (
+	Status        string
+	Justification string
+)
 
 const (
 
@@ -218,7 +220,6 @@ func OpenCSAF(path string, products []string) (*VEX, error) {
 					})
 				}
 			}
-
 		}
 	}
 
