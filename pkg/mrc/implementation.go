@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type MRCImplementation interface {
+type Implementation interface {
 	ApplySingleVEX(*sarif.Report, *vex.VEX) (*sarif.Report, error)
 	SortDocuments([]*vex.VEX) []*vex.VEX
 }
