@@ -8,6 +8,7 @@ package mrc
 import (
 	"fmt"
 
+	"chainguard.dev/mrclean/pkg/attestation"
 	"chainguard.dev/mrclean/pkg/sarif"
 	"chainguard.dev/mrclean/pkg/vex"
 )
@@ -30,36 +31,26 @@ func New() *MRC {
 
 // ApplyFiles takes a list of paths to vex files and applies them to a report
 func (mrc *MRC) ApplyFiles(r *sarif.Report, files []string) (*sarif.Report, error) {
-	vexes := []*vex.VEX{}
-	for _, path := range files {
-		var v *vex.VEX
-		var err error
-		switch mrc.Options.Format {
-		case "vex", "json", "":
-			v, err = vex.OpenJSON(path)
-		case "yaml":
-			v, err = vex.OpenYAML(path)
-		case "csaf":
-			v, err = vex.OpenCSAF(path, mrc.Options.Products)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("opening document: %w", err)
-		}
-		vexes = append(vexes, v)
+	vexes, err := mrc.impl.OpenVexData(mrc.Options, files)
+	if err != nil {
+		return nil, fmt.Errorf("opening vex data: %w", err)
 	}
+
 	return mrc.Apply(r, vexes)
 }
 
 // Apply takes a sarif report and applies one or more vex documents
-func (mrc *MRC) Apply(r *sarif.Report, vexDocs []*vex.VEX) (*sarif.Report, error) {
-	vexDocs = vex.Sort(vexDocs)
-	var err error
+func (mrc *MRC) Apply(r *sarif.Report, vexDocs []*vex.VEX) (finalReport *sarif.Report, err error) {
+	// Sort the docs by date
+	vexDocs = mrc.impl.Sort(vexDocs)
+
+	// Apply the sorted documents to the report
 	for i, doc := range vexDocs {
-		r, err = mrc.impl.ApplySingleVEX(r, doc)
+		finalReport, err = mrc.impl.ApplySingleVEX(r, doc)
 		if err != nil {
 			return nil, fmt.Errorf("applying vex document #%d: %w", i, err)
 		}
 	}
 
-	return r, nil
+	return finalReport, nil
 }

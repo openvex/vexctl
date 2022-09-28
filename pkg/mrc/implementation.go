@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package mrc
 
 import (
+	"fmt"
 	"regexp"
 
 	gosarif "github.com/owenrumney/go-sarif/sarif"
@@ -18,6 +19,8 @@ import (
 type Implementation interface {
 	ApplySingleVEX(*sarif.Report, *vex.VEX) (*sarif.Report, error)
 	SortDocuments([]*vex.VEX) []*vex.VEX
+	OpenVexData(Options, []string) ([]*vex.VEX, error)
+	Sort(docs []*vex.VEX) []*vex.VEX
 }
 
 type defaultMRCImplementation struct{}
@@ -68,4 +71,30 @@ func (impl *defaultMRCImplementation) ApplySingleVEX(report *sarif.Report, vexDo
 		newReport.Runs[i].Results = newResults
 	}
 	return &newReport, nil
+}
+
+// OpenVexData returns a set of vex documents from the paths received
+func (impl *defaultMRCImplementation) OpenVexData(opts Options, paths []string) ([]*vex.VEX, error) {
+	vexes := []*vex.VEX{}
+	for _, path := range paths {
+		var v *vex.VEX
+		var err error
+		switch opts.Format {
+		case "vex", "json", "":
+			v, err = vex.OpenJSON(path)
+		case "yaml":
+			v, err = vex.OpenYAML(path)
+		case "csaf":
+			v, err = vex.OpenCSAF(path, opts.Products)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("opening document: %w", err)
+		}
+		vexes = append(vexes, v)
+	}
+	return vexes, nil
+}
+
+func (impl *defaultMRCImplementation) Sort(docs []*vex.VEX) []*vex.VEX {
+	return vex.Sort(docs)
 }
