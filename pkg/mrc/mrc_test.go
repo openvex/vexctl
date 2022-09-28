@@ -3,9 +3,10 @@ package mrc
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"chainguard.dev/mrclean/pkg/sarif"
 	"chainguard.dev/mrclean/pkg/vex"
-	"github.com/stretchr/testify/require"
 )
 
 func TestVexReport(t *testing.T) {

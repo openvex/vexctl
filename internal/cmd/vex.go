@@ -11,10 +11,11 @@ import (
 	"io"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	"chainguard.dev/mrclean/pkg/mrc"
 	"chainguard.dev/mrclean/pkg/sarif"
 	"chainguard.dev/mrclean/pkg/vex"
-	"github.com/spf13/cobra"
 )
 
 type vexOptions struct {

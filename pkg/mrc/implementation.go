@@ -8,10 +8,11 @@ package mrc
 import (
 	"regexp"
 
-	"chainguard.dev/mrclean/pkg/sarif"
-	"chainguard.dev/mrclean/pkg/vex"
 	gosarif "github.com/owenrumney/go-sarif/sarif"
 	"github.com/sirupsen/logrus"
+
+	"chainguard.dev/mrclean/pkg/sarif"
+	"chainguard.dev/mrclean/pkg/vex"
 )
 
 type Implementation interface {

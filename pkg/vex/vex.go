@@ -13,9 +13,10 @@ import (
 	"sort"
 	"time"
 
-	"chainguard.dev/mrclean/pkg/csaf"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+
+	"chainguard.dev/mrclean/pkg/csaf"
 )
 
 type (
