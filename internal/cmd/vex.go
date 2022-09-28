@@ -37,7 +37,7 @@ func addVEX(parentCmd *cobra.Command) {
 		Use:           "vex",
 		SilenceUsage:  false,
 		SilenceErrors: false,
-		//PersistentPreRunE: initLogging,
+		// PersistentPreRunE: initLogging,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 2 {
 				return errors.New("not enough arguments")
@@ -81,7 +81,6 @@ func addVEX(parentCmd *cobra.Command) {
 			}
 
 			return report.ToJSON(os.Stdout)
-
 		},
 	}
 

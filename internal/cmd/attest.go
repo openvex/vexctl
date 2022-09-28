@@ -16,14 +16,14 @@ type attestOptions struct {
 }
 
 func addAttest(parentCmd *cobra.Command) {
-	//opts := attestOptions{}
+	// opts := attestOptions{}
 	generateCmd := &cobra.Command{
 		Short:         fmt.Sprintf("%s attest: generate vex golden data", appname),
 		Long:          ``,
 		Use:           "attest",
 		SilenceUsage:  false,
 		SilenceErrors: false,
-		//PersistentPreRunE: initLogging,
+		// PersistentPreRunE: initLogging,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return nil
 		},

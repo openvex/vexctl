@@ -45,5 +45,4 @@ func (report *Report) ToJSON(w io.Writer) error {
 		return fmt.Errorf("encoding sarif report: %w", err)
 	}
 	return nil
-
 }

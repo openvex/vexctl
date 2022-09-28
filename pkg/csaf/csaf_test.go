@@ -13,7 +13,7 @@ func TestOpen(t *testing.T) {
 	require.Equal(t, "Example VEX Document", doc.Document.Title)
 	require.Equal(t, "CSAFPID-0001", doc.FirstProductName())
 
-	// Vulnerabilites
+	// Vulnerabilities
 	require.Len(t, doc.Vulnerabilities, 1)
 	require.Equal(t, doc.Vulnerabilities[0].CVE, "CVE-2009-4487")
 	require.Len(t, doc.Vulnerabilities[0].ProductStatus, 1)
@@ -27,7 +27,6 @@ func TestFindFirstProduct(t *testing.T) {
 	require.NotNil(t, doc)
 
 	prod := doc.ProductTree.FindFirstProduct()
-	// require.NotNil(t, prod)
 	require.Equal(t, prod, "CSAFPID-0001")
 }
 
