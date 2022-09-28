@@ -29,6 +29,9 @@ const (
 	// This is the format identifier for
 	formatIdentifier = "vex_attestation"
 
+	// MIME type to record in the attestations
+	MimeType = "text/vex"
+
 	// Impact Statement constants
 	StatusNotAffected        Status = "not_affected"
 	StatusAffected           Status = "affected"

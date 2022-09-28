@@ -23,7 +23,7 @@ func New() *Attestation {
 	return &Attestation{
 		StatementHeader: intoto.StatementHeader{
 			Type:          intoto.StatementInTotoV01,
-			PredicateType: "",
+			PredicateType: vex.MimeType,
 			Subject:       []intoto.Subject{},
 		},
 		Predicate: vex.New(),
