@@ -17,3 +17,11 @@ func TestLoadYAML(t *testing.T) {
 	require.Equal(t, "as", vexDoc)
 	require.Len(t, vexDoc.Statements, 2)
 }
+
+func TestLoadCSAF(t *testing.T) {
+	vexDoc, err := OpenCSAF("testdata/csaf.json", []string{})
+	require.NoError(t, err)
+	require.Len(t, vexDoc.Statements, 1)
+	require.Equal(t, vexDoc.Statements[0].Vulnerability, "CVE-2009-4487")
+	require.Equal(t, vexDoc.Statements[0].Status, StatusNotAffected)
+}

@@ -13,13 +13,41 @@ import (
 )
 
 type MRC struct {
-	impl MRCImplementation
+	impl    MRCImplementation
+	Options Options
+}
+
+type Options struct {
+	Products []string // List of products to match in CSAF docs
+	Format   string   // Firmat of the vex documents
 }
 
 func New() *MRC {
 	return &MRC{
 		impl: &defaultMRCImplementation{},
 	}
+}
+
+// ApplyFiles takes a list of paths to vex files and applies them to a report
+func (mrc *MRC) ApplyFiles(r *sarif.Report, files []string) (*sarif.Report, error) {
+	vexes := []*vex.VEX{}
+	for _, path := range files {
+		var v *vex.VEX
+		var err error
+		switch mrc.Options.Format {
+		case "vex", "json", "":
+			v, err = vex.OpenJSON(path)
+		case "yaml":
+			v, err = vex.OpenYAML(path)
+		case "csaf":
+			v, err = vex.OpenCSAF(path, mrc.Options.Products)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("opening document: %w", err)
+		}
+		vexes = append(vexes, v)
+	}
+	return mrc.Apply(r, vexes)
 }
 
 // Apply takes a sarif report and applies one or more vex documents
