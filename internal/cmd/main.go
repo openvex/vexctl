@@ -8,8 +8,10 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/release-utils/log"
+	"sigs.k8s.io/release-utils/version"
 )
 
 const appname = "mrclean"
@@ -21,9 +23,9 @@ var rootCmd = &cobra.Command{
 Intro Coming Soon™
 
 `,
-	Use:          "bom",
-	SilenceUsage: false,
-	// PersistentPreRunE: initLogging,
+	Use:               "bom",
+	SilenceUsage:      false,
+	PersistentPreRunE: initLogging,
 }
 
 type commandLineOptions struct {
@@ -41,18 +43,16 @@ func init() {
 	)
 
 	addVEX(rootCmd)
-	// rootCmd.AddCommand(version.WithFont("doom"))
+	rootCmd.AddCommand(version.WithFont("doom"))
 }
 
-/*
 func initLogging(*cobra.Command, []string) error {
 	return log.SetupGlobalLogger(commandLineOpts.logLevel)
 }
-*/
+
 // Execute builds the command
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		// logrus.Fatal(err)
-		fmt.Println(fmt.Errorf("fatal: %w", err))
+		logrus.Fatal(err)
 	}
 }
