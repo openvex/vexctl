@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -70,6 +71,11 @@ document should be VEX'ed by specifying --product=PRODUCT_ID.
 			if err := opts.Validate(); err != nil {
 				return fmt.Errorf("validating options: %w", err)
 			}
+
+			ctx := context.Background()
+			vexctl := ctl.New()
+			vexctl.Options.Products = opts.products
+
 			// TODO: Autodetect piped stdin
 			reportFileName := args[0]
 			if args[0] == "-" {
@@ -91,14 +97,12 @@ document should be VEX'ed by specifying --product=PRODUCT_ID.
 			}
 			vexes := []*vex.VEX{}
 			for i := 1; i < len(args); i++ {
-				doc, err := vex.OpenJSON(args[i])
+				doc, err := vexctl.VexFromURI(ctx, args[i])
 				if err != nil {
 					return fmt.Errorf("opening %s: %w", args[i], err)
 				}
 				vexes = append(vexes, doc)
 			}
-			vexctl := ctl.New()
-			vexctl.Options.Products = opts.products
 
 			report, err = vexctl.Apply(report, vexes)
 			if err != nil {

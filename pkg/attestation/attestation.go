@@ -26,10 +26,10 @@ import (
 
 type Attestation struct {
 	intoto.StatementHeader
-	// Predicate contains type speficic metadata.
-	Predicate  interface{} `json:"predicate"`
-	Siged      bool        `json:"-"`
-	signedData []byte      `json:"-"`
+	// Predicate contains type specific metadata.
+	Predicate  vex.VEX `json:"predicate"`
+	Siged      bool    `json:"-"`
+	signedData []byte  `json:"-"`
 }
 
 func New() *Attestation {

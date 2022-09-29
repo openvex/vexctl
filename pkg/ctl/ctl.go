@@ -66,7 +66,7 @@ func (vexctl *VexCtl) Attest(vexDataPath string, imageRefs []string) (*attestati
 
 	// Generate the attestation
 	att := attestation.New()
-	att.Predicate = doc
+	att.Predicate = *doc[0]
 	if err := att.AddImageSubjects(imageRefs); err != nil {
 		return nil, fmt.Errorf("adding image references to attestation")
 	}
@@ -90,4 +90,35 @@ func (vexctl *VexCtl) Attach(ctx context.Context, att *attestation.Attestation, 
 	}
 
 	return nil
+}
+
+// VexFromURI return a vex doc from a path, image ref or URI
+func (vexctl *VexCtl) VexFromURI(ctx context.Context, uri string) (vexData *vex.VEX, err error) {
+	sourceType, err := vexctl.impl.SourceType(uri)
+	if err != nil {
+		return nil, fmt.Errorf("resolving VEX source: %w", err)
+	}
+	var vexes []*vex.VEX
+	switch sourceType {
+	case "file":
+		vexes, err = vexctl.impl.OpenVexData(vexctl.Options, []string{uri})
+		if err == nil {
+			vexData = vexes[0]
+		}
+	case "image":
+		vexes, err = vexctl.impl.ReadImageAttestations(ctx, vexctl.Options, uri)
+		if err == nil {
+			if len(vexes) == 0 {
+				return nil, fmt.Errorf("no attestations found in image")
+			}
+			vexData = vexes[0]
+		}
+	default:
+		return nil, fmt.Errorf("unable to resolve source type (file or image)")
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("opening vex data from %s: %w", uri, err)
+	}
+	return vexData, err
 }

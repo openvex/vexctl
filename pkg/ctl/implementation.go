@@ -8,7 +8,9 @@ package ctl
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -16,16 +18,20 @@ import (
 	gosarif "github.com/owenrumney/go-sarif/sarif"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sirupsen/logrus"
+	"sigs.k8s.io/release-utils/util"
 
 	"chainguard.dev/vex/pkg/attestation"
 	"chainguard.dev/vex/pkg/sarif"
 	"chainguard.dev/vex/pkg/vex"
 )
+
+const IntotoPayloadType = "application/vnd.in-toto+json"
 
 type Implementation interface {
 	ApplySingleVEX(*sarif.Report, *vex.VEX) (*sarif.Report, error)
@@ -34,6 +40,8 @@ type Implementation interface {
 	Sort(docs []*vex.VEX) []*vex.VEX
 	AttestationBytes(*attestation.Attestation) ([]byte, error)
 	Attach(context.Context, *attestation.Attestation, string) error
+	SourceType(uri string) (string, error)
+	ReadImageAttestations(context.Context, Options, string) ([]*vex.VEX, error)
 }
 
 type defaultVexCtlImplementation struct{}
@@ -143,7 +151,7 @@ func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attest
 			return err
 		}
 
-		if env.PayloadType != types.IntotoPayloadType {
+		if env.PayloadType != IntotoPayloadType {
 			return fmt.Errorf("invalid payloadType %s on envelope. Expected %s", env.PayloadType, types.IntotoPayloadType)
 		}
 
@@ -184,4 +192,74 @@ func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attest
 	}
 
 	return nil
+}
+
+// SourceType returns a string indicating what kind of vex
+// source a URI points to
+func (imple *defaultVexCtlImplementation) SourceType(uri string) (string, error) {
+	if util.Exists(uri) {
+		return "file", nil
+	}
+
+	_, err := name.ParseReference(uri)
+	if err == nil {
+		return "image", nil
+	}
+
+	return "", errors.New("unable to resolve the vex source location")
+}
+
+// DownloadAttestation
+func (impl *defaultVexCtlImplementation) ReadImageAttestations(
+	ctx context.Context, opts Options, refString string,
+) (vexes []*vex.VEX, err error) {
+	// Parsae the image reference
+	ref, err := name.ParseReference(refString)
+	if err != nil {
+		return nil, fmt.Errorf("parsing image reference: %w", err)
+	}
+	regOpts := options.RegistryOptions{}
+	remoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting OCI remote options: %w", err)
+	}
+	payloads, err := cosign.FetchAttestationsForReference(ctx, ref, remoteOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("fetching attached attestation: %w", err)
+	}
+	vexes = []*vex.VEX{}
+	for _, dssePayload := range payloads {
+		vexData, err := impl.ReadSignedVEX(dssePayload)
+		if err != nil {
+			return nil, fmt.Errorf("opening dsse payload: %w", err)
+		}
+		vexes = append(vexes, vexData)
+	}
+	return vexes, nil
+}
+
+// ReadSignedVEX returns the vex data inside a signed envelope
+func (impl *defaultVexCtlImplementation) ReadSignedVEX(dssePayload cosign.AttestationPayload) (*vex.VEX, error) {
+	if dssePayload.PayloadType != IntotoPayloadType {
+		logrus.Info("Signed envelope does not contain an in-toto attestation")
+		return nil, nil
+	}
+
+	data, err := base64.StdEncoding.DecodeString(dssePayload.PayLoad)
+	if err != nil {
+		return nil, fmt.Errorf("decoding signed attestation: %w", err)
+	}
+	fmt.Printf("%s\n", string(data))
+
+	// Unmarshall the attestation
+	att := &attestation.Attestation{}
+	if err := json.Unmarshal(data, att); err != nil {
+		return nil, fmt.Errorf("unmarshalling attestation JSON: %w", err)
+	}
+
+	if att.PredicateType != vex.MimeType {
+		return nil, nil
+	}
+
+	return &att.Predicate, nil
 }
