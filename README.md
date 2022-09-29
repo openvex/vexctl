@@ -1,53 +1,56 @@
-# mrclean: A tool to work with VEX
+# vexctl: A tool to make VEX work
 
-MrClean is a tool to apply and attest VEX (Vulnerability Exploitability eXchange) 
-data. Its purpose is to "turn off alerts" of vulnerability data known not to affect
+`vexctl` is a tool to apply and attest VEX (Vulnerability Exploitability eXchange) 
+data. Its purpose is to "turn off" alerts of vulnerabilities known not to affect
 a product.
 
-VEX can be though as a "negative security advisory". Using VEX,software authors
-can communicate to their users that a vulnerable component has no security implications
-in their product.
+VEX can be though as a "negative security advisory". Using VEX, software authors
+can communicate to their users that a vulnerable component has no security
+implications for their product.
 
 ## Operational Model
 
-To achieve its mission, MrClean has two main modes of operation. One
-helps the user create VEX documents, the second applies the VEX data 
+To achieve its mission, `vexctl` has two main modes of operation. One
+helps the user create VEX statements, the second applies the VEX data 
 to scanner results.
 
 ### 1. Create VEX Statements
 
-VEX data can be created to a file on disk or it can be
-captured in an attestation attached to a container image.
+VEX data can be created to a file on disk or it can be captured in a
+signed attestation which can be attached to a container image.
 
-The data is generated from a known rule set which can
-be reused and reapplied to new releases of the same project.
+The data is generated from a known rule set (the Golden Data) which is
+reused and reapplied to new releases of the same project.
 
 #### Generation Examples
 
 ```
-# Attest and attach vex statements to a container image:
-mrclean attest --rules=mydata.vex.json cgr.dev/image@sha256:e4cf37d568d195b4b5af4c36a6ac50bdd6916cbbc442f2f70a377973a3530894
-
-# Write VEX data to disk:
-mrclean generate --rules=mydata.vex.json > vex.json
+# Attest and attach vex statements in mydata.vex.json to a container image:
+vexctl attest --attach --sign mydata.vex.json cgr.dev/image@sha256:e4cf37d568d195b4..
 
 ```
 
 ### 2. VEXing a Results Set
 
-By applying the statements in a VEX document, MrClean will filter security scanner results to remove _vexed out_ entries.
+Using statements in a VEX document or from an attestation, `vexctl` will filter
+security scanner results to remove _vexed out_ entries.
 
-#### Examples
+#### Filtering Examples
 
 ```
 # From a VEX file:
-mrclean vex scan_results.sarif.json vex_data.csaf.
+vexctl filter scan_results.sarif.json vex_data.csaf
 
 
 # From a stored VEX attestation:
-mrclean vex scan_results.sarif.json --image=cgr.dev/image@sha256:e4cf37d568d195b4b5af4c36a6ac50bdd6916cbbc442f2f70a377973a3530894
+vectl filter scan_results.sarif.json cgr.dev/image@sha256:e4cf37d568d195b4b5af4c36a...
 
-# Output in both cases is the sarif results without known vulnerabilities:
+```
+
+The output from both examples willl the same SARIF results data
+without those ulnerabilities stated as not explitable:
+
+```json
 {
   "version": "2.1.0",
   "$schema": "https://json.schemastore.org/sarif-2.1.0-rtm.5.json",
@@ -62,9 +65,26 @@ mrclean vex scan_results.sarif.json --image=cgr.dev/image@sha256:e4cf37d568d195b
 
 ```
 
-We support SARIF results for now, we have plans to handle the propietary formats of the most popular scanners.
+We support results files in SARIF for now. We plan to add support for the
+propietary formats of the most popular scanners.
 
-VEXing a results set means applying one or more VEX files.
-MrClean will sort them in cronological order
-and "replay" the known impacts in the order they were 
-found.
+### Multiple VEX Files 
+
+Assessing impact is process that takes time. VEX is designed to
+communicate with users as time progresses. An example timeline may look like
+this:
+
+1. A project becomes aware of `CVE-2022-12345`, associated to on of its components.
+2. Developers issue a VEX data file with a status of `under_investigation` to
+inform their users they are aware of the CVE but are checking what impact it has.
+3. After investigation, the developers determine the CVE has no impact 
+in their project because the vulnerable function in the component is never executed.
+4. They issue a second VEX document with a status of `not_affected` and using
+the `vulnerable_code_not_in_execute_path` justification.
+
+`vectl` will read all the documents in cronological order and "replay" the
+known impacts statuses the order they were found, effectively computing the 
+`not_affected` status.
+
+If a sarif report is VEX'ed with `vexctl` any entries alerting of CVE-2022-12345
+will be filtered out.
