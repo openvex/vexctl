@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package ctl
 
 import (
+	"context"
 	"fmt"
 
 	"chainguard.dev/vex/pkg/attestation"
@@ -66,23 +67,27 @@ func (vexctl *VexCtl) Attest(vexDataPath string, imageRefs []string) (*attestati
 	// Generate the attestation
 	att := attestation.New()
 	att.Predicate = doc
-	att.AddImageSubjects(imageRefs)
+	if err := att.AddImageSubjects(imageRefs); err != nil {
+		return nil, fmt.Errorf("adding image references to attestation")
+	}
 
 	return att, nil
 }
 
 // Attach attaches an attestation to a list of images
-func (vexctl *VexCtl) Attach(att *attestation.Attestation, imageRefs []string) (err error) {
-	var attestationBytes []byte
+func (vexctl *VexCtl) Attach(ctx context.Context, att *attestation.Attestation, imageRefs []string) (err error) {
+	// Sign the attestation
 	if vexctl.Options.Sign {
-		attestationBytes, err = vexctl.impl.SignAttestation(att)
-	} else {
-		attestationBytes, err = vexctl.impl.AttestationBytes(att)
-	}
-	if err != nil {
-		return fmt.Errorf("signing attestation: %w", err)
+		if err := att.Sign(); err != nil {
+			return fmt.Errorf("signing attestation: %w", err)
+		}
 	}
 
-	fmt.Println(string(attestationBytes))
+	for _, ref := range imageRefs {
+		if err := vexctl.impl.Attach(ctx, att, ref); err != nil {
+			return fmt.Errorf("attaching attestation: %w", err)
+		}
+	}
+
 	return nil
 }

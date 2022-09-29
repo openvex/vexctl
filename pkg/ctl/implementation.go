@@ -8,15 +8,18 @@ package ctl
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
-	"time"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	gosarif "github.com/owenrumney/go-sarif/sarif"
+	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
-	"github.com/sigstore/sigstore/pkg/signature/dsse"
-	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/cosign/pkg/oci/mutate"
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/cosign/pkg/oci/static"
+	"github.com/sigstore/cosign/pkg/types"
 	"github.com/sirupsen/logrus"
 
 	"chainguard.dev/vex/pkg/attestation"
@@ -29,8 +32,8 @@ type Implementation interface {
 	SortDocuments([]*vex.VEX) []*vex.VEX
 	OpenVexData(Options, []string) ([]*vex.VEX, error)
 	Sort(docs []*vex.VEX) []*vex.VEX
-	SignAttestation(*attestation.Attestation) ([]byte, error)
 	AttestationBytes(*attestation.Attestation) ([]byte, error)
+	Attach(context.Context, *attestation.Attestation, string) error
 }
 
 type defaultVexCtlImplementation struct{}
@@ -117,112 +120,68 @@ func (impl *defaultVexCtlImplementation) AttestationBytes(att *attestation.Attes
 	return b.Bytes(), nil
 }
 
-func (impl *defaultVexCtlImplementation) SignAttestation(att *attestation.Attestation) ([]byte, error) {
-	ctx := context.Background()
-	var timeout time.Duration /// TODO move to options
-	var certPath, certChainPath string
-	ko := options.KeyOpts{
-		// KeyRef:     s.options.PrivateKeyPath,
-		// IDToken:    identityToken,
-		FulcioURL:    options.DefaultFulcioURL,
-		RekorURL:     options.DefaultRekorURL,
-		OIDCIssuer:   options.DefaultOIDCIssuerURL,
-		OIDCClientID: "sigstore",
-
-		InsecureSkipFulcioVerify: false,
-		SkipConfirmation:         true,
-		// FulcioAuthFlow:           "",
-	}
-
-	if timeout != 0 {
-		var cancelFn context.CancelFunc
-		ctx, cancelFn = context.WithTimeout(ctx, timeout)
-		defer cancelFn()
-	}
-
-	sv, err := sign.SignerFromKeyOpts(ctx, certPath, certChainPath, ko)
+func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attestation.Attestation, imageRef string) error {
+	env := ssldsse.Envelope{}
+	regOpts := options.RegistryOptions{}
+	remoteOpts, err := regOpts.ClientOpts(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("getting signer: %w", err)
+		return fmt.Errorf("getting OCI remote options: %w", err)
 	}
-	defer sv.Close()
-
-	// Wrap the attestation in the DSSE envelope
-	wrapped := dsse.WrapSigner(sv, "application/vnd.in-toto+json")
 
 	var b bytes.Buffer
 	if err := att.ToJSON(&b); err != nil {
-		return nil, fmt.Errorf("serializing attestation to json: %w", err)
+		return fmt.Errorf("getting attestation JSON")
 	}
+	decoder := json.NewDecoder(&b)
+	for decoder.More() {
+		if err := decoder.Decode(&env); err != nil {
+			return err
+		}
 
-	signedPayload, err := wrapped.SignMessage(
-		bytes.NewReader(b.Bytes()), signatureoptions.WithContext(ctx),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("signing attestation: %w", err)
-	}
-
-	fmt.Println(string(signedPayload))
-	return signedPayload, nil
-}
-
-func (impl *defaultVexCtlImplementation) Attach(att attestation.Attestation, imageRef string) error {
-	/*
-		attestationFile, err := os.Open(signedPayload)
+		payload, err := json.Marshal(env)
 		if err != nil {
 			return err
 		}
 
-		env := ssldsse.Envelope{}
-		decoder := json.NewDecoder()
-		for decoder.More() {
-			if err := decoder.Decode(&env); err != nil {
-				return err
-			}
-
-			payload, err := json.Marshal(env)
-			if err != nil {
-				return err
-			}
-
-			if env.PayloadType != types.IntotoPayloadType {
-				return fmt.Errorf("invalid payloadType %s on envelope. Expected %s", env.PayloadType, types.IntotoPayloadType)
-			}
-
-			ref, err := name.ParseReference(imageRef)
-			if err != nil {
-				return err
-			}
-			digest, err := ociremote.ResolveDigest(ref, remoteOpts...)
-			if err != nil {
-				return err
-			}
-			// Overwrite "ref" with a digest to avoid a race where we use a tag
-			// multiple times, and it potentially points to different things at
-			// each access.
-			ref = digest // nolint
-
-			opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
-			att, err := static.NewAttestation(payload, opts...)
-			if err != nil {
-				return err
-			}
-
-			se, err := ociremote.SignedEntity(digest, remoteOpts...)
-			if err != nil {
-				return err
-			}
-
-			newSE, err := mutate.AttachAttestationToEntity(se, att)
-			if err != nil {
-				return err
-			}
-
-			// Publish the signatures associated with this entity
-			err = ociremote.WriteAttestations(digest.Repository, newSE, remoteOpts...)
-			if err != nil {
-				return err
-			}
+		if env.PayloadType != types.IntotoPayloadType {
+			return fmt.Errorf("invalid payloadType %s on envelope. Expected %s", env.PayloadType, types.IntotoPayloadType)
 		}
-	*/
+
+		ref, err := name.ParseReference(imageRef)
+		if err != nil {
+			return err
+		}
+		digest, err := ociremote.ResolveDigest(ref, remoteOpts...)
+		if err != nil {
+			return err
+		}
+		// Overwrite "ref" with a digest to avoid a race where we use a tag
+		// multiple times, and it potentially points to different things at
+		// each access.
+		ref = digest // nolint:ineffassign
+
+		opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
+		att, err := static.NewAttestation(payload, opts...)
+		if err != nil {
+			return err
+		}
+
+		se, err := ociremote.SignedEntity(digest, remoteOpts...)
+		if err != nil {
+			return err
+		}
+
+		newSE, err := mutate.AttachAttestationToEntity(se, att)
+		if err != nil {
+			return err
+		}
+
+		// Publish the signatures associated with this entity
+		err = ociremote.WriteAttestations(digest.Repository, newSE, remoteOpts...)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -34,6 +35,8 @@ func addAttest(parentCmd *cobra.Command) {
 			}
 			cmd.SilenceUsage = true
 
+			ctx := context.Background()
+
 			vexctl := ctl.New()
 			vexctl.Options.Sign = opts.sign
 
@@ -42,12 +45,14 @@ func addAttest(parentCmd *cobra.Command) {
 				return fmt.Errorf("generating attestation: %w", err)
 			}
 
-			if err := attestation.ToJSON(os.Stdout); err != nil {
-				return fmt.Errorf("marshaling attestation to json")
+			if opts.attach {
+				if err := vexctl.Attach(ctx, attestation, args[1:]); err != nil {
+					return fmt.Errorf("attaching attestation: %w", err)
+				}
 			}
 
-			if opts.attach {
-				vexctl.Attach(attestation, args[1:])
+			if err := attestation.ToJSON(os.Stdout); err != nil {
+				return fmt.Errorf("marshaling attestation to json")
 			}
 
 			return nil
