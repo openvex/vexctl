@@ -88,3 +88,31 @@ known impacts statuses the order they were found, effectively computing the
 
 If a sarif report is VEX'ed with `vexctl` any entries alerting of CVE-2022-12345
 will be filtered out.
+
+## Build vexctl
+
+To build `vexctl` clone this repository and run simply run make.
+
+```bash
+git clone git@github.com:chainguard-dev/vex.git
+cd vex
+make
+
+./vexctl version
+ _   _  _____ __   __ _____  _____  _
+| | | ||  ___|\ \ / //  __ \|_   _|| |
+| | | || |__   \ V / | /  \/  | |  | |
+| | | ||  __|  /   \ | |      | |  | |
+\ \_/ /| |___ / /^\ \| \__/\  | |  | |____
+ \___/ \____/ \/   \/ \____/  \_/  \_____/
+vexctl: A tool for working with VEX data
+
+GitVersion:    devel
+GitCommit:     unknown
+GitTreeState:  unknown
+BuildDate:     unknown
+GoVersion:     go1.19
+Compiler:      gc
+Platform:      linux/amd64
+
+```
