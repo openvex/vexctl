@@ -3,7 +3,7 @@ Copyright 2022 Chainguard, Inc.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package mrc
+package ctl
 
 import (
 	"bytes"
@@ -19,9 +19,9 @@ import (
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/sirupsen/logrus"
 
-	"chainguard.dev/mrclean/pkg/attestation"
-	"chainguard.dev/mrclean/pkg/sarif"
-	"chainguard.dev/mrclean/pkg/vex"
+	"chainguard.dev/vex/pkg/attestation"
+	"chainguard.dev/vex/pkg/sarif"
+	"chainguard.dev/vex/pkg/vex"
 )
 
 type Implementation interface {
@@ -33,7 +33,7 @@ type Implementation interface {
 	AttestationBytes(*attestation.Attestation) ([]byte, error)
 }
 
-type defaultMRCImplementation struct{}
+type defaultVexCtlImplementation struct{}
 
 var cveRegexp regexp.Regexp
 
@@ -41,11 +41,11 @@ func init() {
 	cveRegexp = *regexp.MustCompile(`^(CVE-\d+-\d+)`)
 }
 
-func (impl *defaultMRCImplementation) SortDocuments(docs []*vex.VEX) []*vex.VEX {
+func (impl *defaultVexCtlImplementation) SortDocuments(docs []*vex.VEX) []*vex.VEX {
 	return vex.Sort(docs)
 }
 
-func (impl *defaultMRCImplementation) ApplySingleVEX(report *sarif.Report, vexDoc *vex.VEX) (*sarif.Report, error) {
+func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, vexDoc *vex.VEX) (*sarif.Report, error) {
 	newReport := *report
 	logrus.Infof("VEX document contains %d statements", len(vexDoc.Statements))
 	logrus.Infof("+%v Runs: %d\n", report, len(report.Runs))
@@ -84,7 +84,7 @@ func (impl *defaultMRCImplementation) ApplySingleVEX(report *sarif.Report, vexDo
 }
 
 // OpenVexData returns a set of vex documents from the paths received
-func (impl *defaultMRCImplementation) OpenVexData(opts Options, paths []string) ([]*vex.VEX, error) {
+func (impl *defaultVexCtlImplementation) OpenVexData(opts Options, paths []string) ([]*vex.VEX, error) {
 	vexes := []*vex.VEX{}
 	for _, path := range paths {
 		var v *vex.VEX
@@ -105,11 +105,11 @@ func (impl *defaultMRCImplementation) OpenVexData(opts Options, paths []string) 
 	return vexes, nil
 }
 
-func (impl *defaultMRCImplementation) Sort(docs []*vex.VEX) []*vex.VEX {
+func (impl *defaultVexCtlImplementation) Sort(docs []*vex.VEX) []*vex.VEX {
 	return vex.Sort(docs)
 }
 
-func (impl *defaultMRCImplementation) AttestationBytes(att *attestation.Attestation) ([]byte, error) {
+func (impl *defaultVexCtlImplementation) AttestationBytes(att *attestation.Attestation) ([]byte, error) {
 	var b bytes.Buffer
 	if err := att.ToJSON(&b); err != nil {
 		return nil, fmt.Errorf("serializing attestation to json: %w", err)
@@ -117,7 +117,7 @@ func (impl *defaultMRCImplementation) AttestationBytes(att *attestation.Attestat
 	return b.Bytes(), nil
 }
 
-func (impl *defaultMRCImplementation) SignAttestation(att *attestation.Attestation) ([]byte, error) {
+func (impl *defaultVexCtlImplementation) SignAttestation(att *attestation.Attestation) ([]byte, error) {
 	ctx := context.Background()
 	var timeout time.Duration /// TODO move to options
 	var certPath, certChainPath string
@@ -165,7 +165,7 @@ func (impl *defaultMRCImplementation) SignAttestation(att *attestation.Attestati
 	return signedPayload, nil
 }
 
-func (impl *defaultMRCImplementation) Attach(att attestation.Attestation, imageRef string) error {
+func (impl *defaultVexCtlImplementation) Attach(att attestation.Attestation, imageRef string) error {
 	/*
 		attestationFile, err := os.Open(signedPayload)
 		if err != nil {

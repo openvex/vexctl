@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	"chainguard.dev/mrclean/internal/cmd"
+	"chainguard.dev/vex/internal/cmd"
 )
 
 func main() {

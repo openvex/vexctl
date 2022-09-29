@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 
-	"chainguard.dev/mrclean/pkg/mrc"
+	"chainguard.dev/vex/pkg/ctl"
 	"github.com/spf13/cobra"
 )
 
@@ -34,10 +34,10 @@ func addAttest(parentCmd *cobra.Command) {
 			}
 			cmd.SilenceUsage = true
 
-			mrc := mrc.New()
-			mrc.Options.Sign = opts.sign
+			vexctl := ctl.New()
+			vexctl.Options.Sign = opts.sign
 
-			attestation, err := mrc.Attest(args[0], args[1:])
+			attestation, err := vexctl.Attest(args[0], args[1:])
 			if err != nil {
 				return fmt.Errorf("generating attestation: %w", err)
 			}
@@ -47,7 +47,7 @@ func addAttest(parentCmd *cobra.Command) {
 			}
 
 			if opts.attach {
-				mrc.Attach(attestation, args[1:])
+				vexctl.Attach(attestation, args[1:])
 			}
 
 			return nil

@@ -1,4 +1,4 @@
-module chainguard.dev/mrclean
+module chainguard.dev/vex
 
 go 1.19
 

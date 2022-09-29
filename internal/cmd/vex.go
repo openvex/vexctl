@@ -13,9 +13,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"chainguard.dev/mrclean/pkg/mrc"
-	"chainguard.dev/mrclean/pkg/sarif"
-	"chainguard.dev/mrclean/pkg/vex"
+	"chainguard.dev/vex/pkg/ctl"
+	"chainguard.dev/vex/pkg/sarif"
+	"chainguard.dev/vex/pkg/vex"
 )
 
 type vexOptions struct {
@@ -73,10 +73,10 @@ func addVEX(parentCmd *cobra.Command) {
 				}
 				vexes = append(vexes, doc)
 			}
-			mr := mrc.New()
-			mr.Options.Products = opts.products
+			vexctl := ctl.New()
+			vexctl.Options.Products = opts.products
 
-			report, err = mr.Apply(report, vexes)
+			report, err = vexctl.Apply(report, vexes)
 			if err != nil {
 				return fmt.Errorf("applying vexes to report: %w", err)
 			}

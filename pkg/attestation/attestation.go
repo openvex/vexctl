@@ -14,7 +14,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
 
-	"chainguard.dev/mrclean/pkg/vex"
+	"chainguard.dev/vex/pkg/vex"
 )
 
 type (

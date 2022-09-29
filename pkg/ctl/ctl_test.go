@@ -1,12 +1,12 @@
-package mrc
+package ctl
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"chainguard.dev/mrclean/pkg/sarif"
-	"chainguard.dev/mrclean/pkg/vex"
+	"chainguard.dev/vex/pkg/sarif"
+	"chainguard.dev/vex/pkg/vex"
 )
 
 func TestVexReport(t *testing.T) {
@@ -21,7 +21,7 @@ func TestVexReport(t *testing.T) {
 	require.Len(t, report.Runs, 1)
 	require.Len(t, report.Runs[0].Results, 123)
 
-	impl := defaultMRCImplementation{}
+	impl := defaultVexCtlImplementation{}
 	newReport, err := impl.ApplySingleVEX(report, vexDoc)
 	require.NoError(t, err)
 	require.Len(t, newReport.Runs, 1)

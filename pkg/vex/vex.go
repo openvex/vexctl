@@ -16,7 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
-	"chainguard.dev/mrclean/pkg/csaf"
+	"chainguard.dev/vex/pkg/csaf"
 )
 
 type (
