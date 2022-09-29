@@ -14,11 +14,11 @@ import (
 	"sigs.k8s.io/release-utils/version"
 )
 
-const appname = "mrclean"
+const appname = "vexctl"
 
 var rootCmd = &cobra.Command{
-	Short: "A tool for working with VEX",
-	Long: `A tool for working with VEX
+	Short: "A tool for working with VEX data",
+	Long: `A tool for working with VEX data
 
 Intro Coming Soon™
 
@@ -42,7 +42,7 @@ func init() {
 		fmt.Sprintf("the logging verbosity, either %s", log.LevelNames()),
 	)
 
-	addVEX(rootCmd)
+	addFilter(rootCmd)
 	addAttest(rootCmd)
 	rootCmd.AddCommand(version.WithFont("doom"))
 }
