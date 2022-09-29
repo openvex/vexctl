@@ -21,6 +21,7 @@ type MRC struct {
 type Options struct {
 	Products []string // List of products to match in CSAF docs
 	Format   string   // Firmat of the vex documents
+	Sign     bool     // When true, attestations will be signed before attaching
 }
 
 func New() *MRC {
@@ -53,4 +54,35 @@ func (mrc *MRC) Apply(r *sarif.Report, vexDocs []*vex.VEX) (finalReport *sarif.R
 	}
 
 	return finalReport, nil
+}
+
+// Generate an attestation from a VEX
+func (mrc *MRC) Attest(vexDataPath string, imageRefs []string) (*attestation.Attestation, error) {
+	doc, err := mrc.impl.OpenVexData(mrc.Options, []string{vexDataPath})
+	if err != nil {
+		return nil, fmt.Errorf("opening vex data")
+	}
+
+	// Generate the attestation
+	att := attestation.New()
+	att.Predicate = doc
+	att.AddImageSubjects(imageRefs)
+
+	return att, nil
+}
+
+// Attach attaches an attestation to a list of images
+func (mrc *MRC) Attach(att *attestation.Attestation, imageRefs []string) (err error) {
+	var attestationBytes []byte
+	if mrc.Options.Sign {
+		attestationBytes, err = mrc.impl.SignAttestation(att)
+	} else {
+		attestationBytes, err = mrc.impl.AttestationBytes(att)
+	}
+	if err != nil {
+		return fmt.Errorf("signing attestation: %w", err)
+	}
+
+	fmt.Println(string(attestationBytes))
+	return nil
 }

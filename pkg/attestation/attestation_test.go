@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package attestation
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,8 @@ func TestSerialize(t *testing.T) {
 	pred.Author = "Puerco"
 
 	att.Predicate = pred
-	jsonData, err := att.ToJSON()
+	var b bytes.Buffer
+	err := att.ToJSON(&b)
 	require.NoError(t, err)
-	require.Equal(t, "", string(jsonData))
+	require.Equal(t, "", b.String())
 }

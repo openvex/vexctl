@@ -27,7 +27,7 @@ type (
 const (
 
 	// This is the format identifier for
-	formatIdentifier = "vex_attestation"
+	formatIdentifier = "intoto+vex"
 
 	// MIME type to record in the attestations
 	MimeType = "text/vex"
@@ -68,8 +68,8 @@ type VEX struct {
 }
 
 type Metadata struct {
-	Format             string    // VEX Format Identifier
-	ID                 string    // Identifier string for the VEX document
+	ID                 string    `json:"id"`                // Identifier string for the VEX document
+	Format             string    `json:"format"`            // VEX Format Identifier
 	Author             string    `json:"author"`            // Document author
 	AuthorRole         string    `json:"role"`              // Role of author
 	ProductIdentifiers []string  `json:"product,omitempty"` // For spec completeness

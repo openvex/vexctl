@@ -43,6 +43,7 @@ func init() {
 	)
 
 	addVEX(rootCmd)
+	addAttest(rootCmd)
 	rootCmd.AddCommand(version.WithFont("doom"))
 }
 

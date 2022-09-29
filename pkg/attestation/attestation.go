@@ -6,10 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 package attestation
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"strings"
 
+	"github.com/google/go-containerregistry/pkg/crane"
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
 
 	"chainguard.dev/mrclean/pkg/vex"
@@ -31,14 +33,29 @@ func New() *Attestation {
 }
 
 // ToJSON returns the attestation as a JSON byte array
-func (att *Attestation) ToJSON() ([]byte, error) {
-	var b bytes.Buffer
-	enc := json.NewEncoder(&b)
+func (att *Attestation) ToJSON(w io.Writer) error {
+	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	enc.SetEscapeHTML(false)
 
 	if err := enc.Encode(att); err != nil {
-		return nil, fmt.Errorf("encoding attestation: %w", err)
+		return fmt.Errorf("encoding attestation: %w", err)
 	}
-	return b.Bytes(), nil
+	return nil
+}
+
+func (att *Attestation) AddImageSubjects(imageRefs []string) error {
+	for _, refString := range imageRefs {
+		digest, err := crane.Digest(refString)
+		if err != nil {
+			return fmt.Errorf("getting image digest: %w", err)
+		}
+		s := intoto.Subject{
+			Name:   refString,
+			Digest: map[string]string{"sha256": strings.TrimPrefix(digest, "sha256:")},
+		}
+
+		att.Subject = append(att.Subject, s)
+	}
+	return nil
 }
