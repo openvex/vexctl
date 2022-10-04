@@ -14,7 +14,6 @@ func TestLoadYAML(t *testing.T) {
 	vexDoc, err := OpenYAML("testdata/vex.yaml")
 	require.NoError(t, err)
 
-	require.Equal(t, "as", vexDoc)
 	require.Len(t, vexDoc.Statements, 2)
 }
 

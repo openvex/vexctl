@@ -166,7 +166,7 @@ func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attest
 		// Overwrite "ref" with a digest to avoid a race where we use a tag
 		// multiple times, and it potentially points to different things at
 		// each access.
-		ref = digest // nolint:ineffassign
+		ref = digest //nolint:ineffassign
 
 		opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
 		att, err := static.NewAttestation(payload, opts...)
@@ -196,7 +196,7 @@ func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attest
 
 // SourceType returns a string indicating what kind of vex
 // source a URI points to
-func (imple *defaultVexCtlImplementation) SourceType(uri string) (string, error) {
+func (impl *defaultVexCtlImplementation) SourceType(uri string) (string, error) {
 	if util.Exists(uri) {
 		return "file", nil
 	}

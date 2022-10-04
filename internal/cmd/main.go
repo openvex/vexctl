@@ -20,12 +20,12 @@ var rootCmd = &cobra.Command{
 	Short: "A tool for working with VEX data",
 	Long: `A tool for working with VEX data
 
-vexctl is a tool to work with VEX (Vulnerability Exploitability eXchange) 
+vexctl is a tool to work with VEX (Vulnerability Exploitability eXchange)
 data and to use it to interpret security scanner results.
 
 It enables users to attach vex information to container images and to
-filter result sets using the VEX information to get a clear view of which 
-vulnerabilites apply to their project.
+filter result sets using the VEX information to get a clear view of which
+vulnerabilities apply to their project.
 
 For more information see the --attest and --filter subcomands
 

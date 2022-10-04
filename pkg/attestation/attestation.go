@@ -28,7 +28,7 @@ type Attestation struct {
 	intoto.StatementHeader
 	// Predicate contains type specific metadata.
 	Predicate  vex.VEX `json:"predicate"`
-	Siged      bool    `json:"-"`
+	Signed     bool    `json:"-"`
 	signedData []byte  `json:"-"`
 }
 
@@ -45,12 +45,13 @@ func New() *Attestation {
 
 // ToJSON returns the attestation as a JSON byte array
 func (att *Attestation) ToJSON(w io.Writer) error {
-	if att.Siged {
+	if att.Signed {
 		if _, err := w.Write(att.signedData); err != nil {
 			return fmt.Errorf("writing signed attestation")
 		}
 		return nil
 	}
+
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	enc.SetEscapeHTML(false)
@@ -58,6 +59,7 @@ func (att *Attestation) ToJSON(w io.Writer) error {
 	if err := enc.Encode(att); err != nil {
 		return fmt.Errorf("encoding attestation: %w", err)
 	}
+
 	return nil
 }
 
@@ -123,6 +125,6 @@ func (att *Attestation) Sign() error {
 	}
 
 	att.signedData = signedPayload
-	att.Siged = true
+	att.Signed = true
 	return nil
 }
