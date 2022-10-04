@@ -7,6 +7,7 @@ package attestation
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,15 +17,16 @@ import (
 
 func TestSerialize(t *testing.T) {
 	att := New()
-	//_, ok := att.Predicate.(vex.VEX)
-	// require.True(t, ok)
-
 	pred := vex.New()
-	pred.Author = "Puerco"
-
+	pred.Author = "Chainguard"
 	att.Predicate = pred
+
 	var b bytes.Buffer
 	err := att.ToJSON(&b)
 	require.NoError(t, err)
-	require.Equal(t, "", b.String())
+
+	att2 := New()
+	err = json.Unmarshal(b.Bytes(), &att2)
+	require.NoError(t, err)
+	require.Equal(t, att2.Predicate.Author, "Chainguard")
 }

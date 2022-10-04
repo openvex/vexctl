@@ -4,7 +4,7 @@ id: ""
 author: "Chainguard"
 role: "author"
 timestamp: "2022-08-29T17:48:53.697543267-05:00"
-vulnerabilities":
+statements:
   - vulnerability: "CVE-2022-31030"
     status: "not_affected"
     justification: "vulnerable_code_not_in_execute_path"
