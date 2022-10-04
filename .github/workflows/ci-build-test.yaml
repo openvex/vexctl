@@ -24,7 +24,7 @@ jobs:
           cache: true
 
       - name: build
-        run: make binary
+        run: make vex
 
   test:
     name: test
@@ -39,5 +39,5 @@ jobs:
           check-latest: true
           cache: true
 
-      - name: build
+      - name: test
         run: make test
