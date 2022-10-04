@@ -1,0 +1,24 @@
+# Copyright 2022 Chainguard, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    # github-actions / path starts .github/workflows
+    directory: "/"
+    schedule:
+      # Run every weekday
+      interval: "daily"
+    open-pull-requests-limit: 10
+    labels:
+    - "kind/other"
+    - "release-note-none"
+
+  - package-ecosystem: gomod
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+    labels:
+    - "kind/other"
+    - "release-note-none"
