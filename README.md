@@ -43,7 +43,7 @@ vexctl filter scan_results.sarif.json vex_data.csaf
 
 
 # From a stored VEX attestation:
-vectl filter scan_results.sarif.json cgr.dev/image@sha256:e4cf37d568d195b4b5af4c36a...
+vexctl filter scan_results.sarif.json cgr.dev/image@sha256:e4cf37d568d195b4b5af4c36a...
 
 ```
 
@@ -82,7 +82,7 @@ in their project because the vulnerable function in the component is never execu
 4. They issue a second VEX document with a status of `not_affected` and using
 the `vulnerable_code_not_in_execute_path` justification.
 
-`vectl` will read all the documents in cronological order and "replay" the
+`vexctl` will read all the documents in cronological order and "replay" the
 known impacts statuses the order they were found, effectively computing the 
 `not_affected` status.
 
