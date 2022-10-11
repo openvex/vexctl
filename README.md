@@ -1,6 +1,6 @@
 # vexctl: A tool to make VEX work
 
-`vexctl` is a tool to apply and attest VEX (Vulnerability Exploitability eXchange) 
+`vexctl` is a tool to apply and attest VEX (Vulnerability Exploitability eXchange)
 data. Its purpose is to "turn off" alerts of vulnerabilities known not to affect
 a product.
 
@@ -11,7 +11,7 @@ implications for their product.
 ## Operational Model
 
 To achieve its mission, `vexctl` has two main modes of operation. One
-helps the user create VEX statements, the second applies the VEX data 
+helps the user create VEX statements, the second applies the VEX data
 to scanner results.
 
 ### 1. Create VEX Statements
@@ -68,7 +68,7 @@ without those ulnerabilities stated as not explitable:
 We support results files in SARIF for now. We plan to add support for the
 propietary formats of the most popular scanners.
 
-### Multiple VEX Files 
+### Multiple VEX Files
 
 Assessing impact is process that takes time. VEX is designed to
 communicate with users as time progresses. An example timeline may look like
@@ -77,13 +77,13 @@ this:
 1. A project becomes aware of `CVE-2022-12345`, associated to on of its components.
 2. Developers issue a VEX data file with a status of `under_investigation` to
 inform their users they are aware of the CVE but are checking what impact it has.
-3. After investigation, the developers determine the CVE has no impact 
+3. After investigation, the developers determine the CVE has no impact
 in their project because the vulnerable function in the component is never executed.
 4. They issue a second VEX document with a status of `not_affected` and using
 the `vulnerable_code_not_in_execute_path` justification.
 
 `vexctl` will read all the documents in cronological order and "replay" the
-known impacts statuses the order they were found, effectively computing the 
+known impacts statuses the order they were found, effectively computing the
 `not_affected` status.
 
 If a sarif report is VEX'ed with `vexctl` any entries alerting of CVE-2022-12345
@@ -93,7 +93,7 @@ will be filtered out.
 
 To build `vexctl` clone this repository and run simply run make.
 
-```bash
+```console
 git clone git@github.com:chainguard-dev/vex.git
 cd vex
 make
@@ -114,5 +114,4 @@ BuildDate:     unknown
 GoVersion:     go1.19
 Compiler:      gc
 Platform:      linux/amd64
-
 ```
