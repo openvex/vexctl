@@ -74,7 +74,7 @@ Assessing impact is process that takes time. VEX is designed to
 communicate with users as time progresses. An example timeline may look like
 this:
 
-1. A project becomes aware of `CVE-2022-12345`, associated to on of its components.
+1. A project becomes aware of `CVE-2022-12345`, associated with one of its components.
 2. Developers issue a VEX data file with a status of `under_investigation` to
 inform their users they are aware of the CVE but are checking what impact it has.
 3. After investigation, the developers determine the CVE has no impact
