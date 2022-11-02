@@ -75,6 +75,7 @@ document should be VEX'ed by specifying --product=PRODUCT_ID.
 			ctx := context.Background()
 			vexctl := ctl.New()
 			vexctl.Options.Products = opts.products
+			vexctl.Options.Format = opts.reportFormat
 
 			// TODO: Autodetect piped stdin
 			reportFileName := args[0]
