@@ -3,7 +3,7 @@ module chainguard.dev/vex
 go 1.19
 
 require (
-	github.com/google/go-containerregistry v0.12.0
+	github.com/google/go-containerregistry v0.12.1
 	github.com/in-toto/in-toto-golang v0.3.4-0.20220709202702-fa494aaa0add
 	github.com/owenrumney/go-sarif v1.1.1
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0
