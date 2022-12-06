@@ -61,7 +61,7 @@ func (vexctl *VexCtl) Apply(r *sarif.Report, vexDocs []*vex.VEX) (finalReport *s
 func (vexctl *VexCtl) Attest(vexDataPath string, imageRefs []string) (*attestation.Attestation, error) {
 	doc, err := vexctl.impl.OpenVexData(vexctl.Options, []string{vexDataPath})
 	if err != nil {
-		return nil, fmt.Errorf("opening vex data")
+		return nil, fmt.Errorf("opening vex data: %w", err)
 	}
 
 	// Generate the attestation
