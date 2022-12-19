@@ -19,31 +19,84 @@ import (
 	"chainguard.dev/vex/pkg/csaf"
 )
 
-type (
-	Status        string
-	Justification string
-)
-
 const (
-
 	// This is the format identifier for
-	formatIdentifier = "intoto+vex"
+	formatIdentifier = "text/vex+json"
 
 	// MIME type to record in the attestations
 	MimeType = "text/vex"
+)
 
-	// Impact Statement constants
-	StatusNotAffected        Status = "not_affected"
-	StatusAffected           Status = "affected"
-	StatusFixed              Status = "fixed"
+type Status string
+
+const (
+	// StatusNotAffected means no remediation or mitigation is required.
+	StatusNotAffected Status = "not_affected"
+
+	// StatusAffected means actions are recommended to remediate or mitigate.
+	StatusAffected Status = "affected"
+
+	// StatusFixed means the listed products or components have been remediated (by including fixes).
+	StatusFixed Status = "fixed"
+
+	// StatusUnderInvestigation means the author of the VEX statement is investigating.
 	StatusUnderInvestigation Status = "under_investigation"
+)
 
-	// Justification constants
-	ComponentNotPresent                         Justification = "component_not_present"
-	VulnerableCodeNotPresent                    Justification = "vulnerable_code_not_present"
-	VulnerableCodeNotInExecutePath              Justification = "vulnerable_code_not_in_execute_path"
+type Justification string
+
+// Valid returns a bool indicating whether the Justification value is equal to one of the enumerated allowed values for Justification.
+func (j Justification) Valid() bool {
+	switch j {
+	case ComponentNotPresent,
+		VulnerableCodeNotPresent,
+		VulnerableCodeNotInExecutePath,
+		VulnerableCodeCannotBeControlledByAdversary,
+		InlineMitigationsAlreadyExist:
+
+		return true
+
+	default:
+
+		return false
+	}
+}
+
+const (
+	// ComponentNotPresent means the vulnerable component is not included in the artifact.
+	//
+	// ComponentNotPresent is a strong justification that the artifact is not affected.
+	ComponentNotPresent Justification = "component_not_present"
+
+	// VulnerableCodeNotPresent means the vulnerable component is included in
+	// artifact, but the vulnerable code is not present. Typically, this case occurs
+	// when source code is configured or built in a way that excluded the vulnerable
+	// code.
+	//
+	// VulnerableCodeNotPresent is a strong justification that the artifact is not affected.
+	VulnerableCodeNotPresent Justification = "vulnerable_code_not_present"
+
+	// VulnerableCodeNotInExecutePath means the vulnerable code (likely in
+	// [subcomponent_id]) can not be executed as it is used by [product_id].
+	// Typically, this case occurs when [product_id] includes the vulnerable
+	// [subcomponent_id] and the vulnerable code but does not call or use the
+	// vulnerable code.
+	VulnerableCodeNotInExecutePath Justification = "vulnerable_code_not_in_execute_path"
+
+	// VulnerableCodeCannotBeControlledByAdversary means the vulnerable code cannot
+	// be controlled by an attacker to exploit the vulnerability.
+	//
+	// This justification could be difficult to prove conclusively.
 	VulnerableCodeCannotBeControlledByAdversary Justification = "vulnerable_code_cannot_be_controlled_by_adversary"
-	InlineMitigationsAlreadyExist               Justification = "inline_mitigations_already_exist"
+
+	// InlineMitigationsAlreadyExist means [product_id] includes built-in protections
+	// or features that prevent exploitation of the vulnerability. These built-in
+	// protections cannot be subverted by the attacker and cannot be configured or
+	// disabled by the user. These mitigations completely prevent exploitation based
+	// on known attack vectors.
+	//
+	// This justification could be difficult to prove conclusively. History is littered with examples of mitigation bypasses, typically involving minor modifications of existing exploit code.
+	InlineMitigationsAlreadyExist Justification = "inline_mitigations_already_exist"
 )
 
 // StatusFromCSAF returns a vex status from the CSAF status
@@ -76,16 +129,31 @@ type Metadata struct {
 	Timestamp          time.Time `json:"timestamp"`
 }
 
-// Statement
+// A Statement is a declaration conveying a single [status] for a single [vul_id] for one or more [product_id]s. A VEX Statement exists within a VEX Document.
 type Statement struct {
-	Vulnerability   string                   `json:"vulnerability"`
-	Status          Status                   `json:"impact"`
-	Justification   Justification            `json:"justification,omitempty"`
-	ActionStatement string                   `json:"action_statement,omitempty"` // Required if status = AFFECTED
-	References      []VulnerabilityReference `json:"references,omitempty"`       // Optional list
+	Vulnerability string `json:"vulnerability"`
+
+	// A VEX statement MUST provide Status of the vulnerabilities with respect to the
+	// products and components listed in the statement. Status MUST be one of the
+	// Status const values, some of which have further options and requirements.
+	Status Status `json:"status"`
+
+	// For ”Not affected” status, a VEX statement MAY include a status Justification
+	// that further explains the status.
+	Justification Justification `json:"justification,omitempty"`
+
+	// For status “Affected”, a VEX statement MUST include an ActionStatement that
+	// SHOULD describe actions to remediate or mitigate [vul_id].
+	ActionStatement string `json:"action_statement,omitempty"` // Required if status = AFFECTED
+
+	// For status “Not affected”, a VEX statement MUST include an ImpactStatement
+	// that contains a description why the vulnerability cannot be exploited.
+	ImpactStatement string `json:"impact_statement,omitempty"`
+
+	References []VulnerabilityReference `json:"references,omitempty"` // Optional list
 }
 
-// VulnerabilityReference captures other identifier assinged to the CVE
+// VulnerabilityReference captures other identifier assigned to the CVE
 type VulnerabilityReference struct {
 	RefType   string `json:"type"` // URL, OSV, FEDORA, etc
 	Reference string `reference:"ref"`

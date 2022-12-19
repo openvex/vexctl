@@ -6,13 +6,13 @@
   "statements": [
     {
     "vulnerability": "CVE-2009-4487",
-    "impact": "not_affected",
+    "status": "not_affected",
     "justification": "vulnerable_code_not_in_execute_path",
     "action_statement": "Affected library function not called"
     },
     {
     "vulnerability": "CVE-2021-44228",
-    "impact": "affected",
+    "status": "affected",
     "action_statement": "Customers are advised to upgrade"
     }
   ]
