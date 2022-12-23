@@ -309,18 +309,19 @@ func (impl *defaultVexCtlImplementation) Merge(mergeOpts MergeOptions, docs []*v
 	}
 
 	for _, doc := range docs {
+	LOOP_STATEMENTS:
 		for _, s := range doc.Statements {
 			if len(iProds) > 0 {
-				for _, pid := range s.ProductIdentifiers {
+				for _, pid := range s.Products {
 					if _, ok := iProds[pid]; !ok {
-						continue
+						continue LOOP_STATEMENTS
 					}
 				}
 			}
 
 			if len(iVulns) > 0 {
 				if _, ok := iProds[s.Vulnerability]; !ok {
-					continue
+					continue LOOP_STATEMENTS
 				}
 			}
 

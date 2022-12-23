@@ -41,7 +41,7 @@ func TestMerge(t *testing.T) {
 		expectedDoc *vex.VEX
 		shouldErr   bool
 	}{
-		// CeZero docs should fail
+		// Zero docs should fail
 		{
 			opts:        MergeOptions{},
 			docs:        []*vex.VEX{},
