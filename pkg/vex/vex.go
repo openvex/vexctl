@@ -177,7 +177,6 @@ func OpenCSAF(path string, products []string) (*VEX, error) {
 						Status:          StatusFromCSAF(status),
 						Justification:   "", // Justifications are not machine readable in csaf, it seems
 						ActionStatement: just,
-						References:      []VulnerabilityReference{},
 					})
 				}
 			}
