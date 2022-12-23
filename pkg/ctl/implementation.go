@@ -12,7 +12,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
+	"sort"
+	"strconv"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	gosarif "github.com/owenrumney/go-sarif/sarif"
@@ -42,6 +46,8 @@ type Implementation interface {
 	Attach(context.Context, *attestation.Attestation, string) error
 	SourceType(uri string) (string, error)
 	ReadImageAttestations(context.Context, Options, string) ([]*vex.VEX, error)
+	Merge(MergeOptions, []*vex.VEX) (*vex.VEX, error)
+	LoadFiles([]string) ([]*vex.VEX, error)
 }
 
 type defaultVexCtlImplementation struct{}
@@ -262,4 +268,85 @@ func (impl *defaultVexCtlImplementation) ReadSignedVEX(dssePayload cosign.Attest
 	}
 
 	return &att.Predicate, nil
+}
+
+type MergeOptions struct {
+	Products        []string // Product IDs to consider
+	Vulnerabilities []string // IDs of vulnerabilities to merge
+}
+
+func (impl *defaultVexCtlImplementation) Merge(mergeOpts MergeOptions, docs []*vex.VEX) (*vex.VEX, error) {
+	if len(docs) == 0 {
+		return nil, fmt.Errorf("at least one vex document is required to merge")
+	}
+	newDoc := &vex.VEX{
+		Metadata: vex.Metadata{
+			ID:                 "", // TODO
+			Format:             vex.MimeType,
+			ProductIdentifiers: []string{},
+			Timestamp:          time.Now(),
+		},
+	}
+
+	// Support envvar for reproducible vexing
+	if d := os.Getenv("SOURCE_DATE_EPOCH"); d != "" {
+		sde, err := strconv.ParseInt(d, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse SOURCE_DATE_EPOCH: %w", err)
+		}
+		newDoc.Metadata.Timestamp = time.Unix(sde, 0)
+	}
+
+	ss := []vex.Statement{}
+
+	iProds := map[string]struct{}{}
+	iVulns := map[string]struct{}{}
+	for _, id := range mergeOpts.Products {
+		iProds[id] = struct{}{}
+	}
+	for _, id := range mergeOpts.Vulnerabilities {
+		iVulns[id] = struct{}{}
+	}
+
+	for _, doc := range docs {
+		for _, s := range doc.Statements {
+			if len(iProds) > 0 {
+				for _, pid := range s.ProductIdentifiers {
+					if _, ok := iProds[pid]; !ok {
+						continue
+					}
+				}
+			}
+
+			if len(iVulns) > 0 {
+				if _, ok := iProds[s.Vulnerability]; !ok {
+					continue
+				}
+			}
+
+			ss = append(ss, s)
+		}
+	}
+
+	// Sort statements
+	sort.Slice(ss, func(i, j int) bool {
+		return ss[i].Timestamp.Before(ss[j].Timestamp)
+	})
+
+	newDoc.Statements = ss
+
+	return newDoc, nil
+}
+
+// LoadFiles loads multiple vex files from disk
+func (di *defaultVexCtlImplementation) LoadFiles(filePaths []string) ([]*vex.VEX, error) {
+	vexes := make([]*vex.VEX, len(filePaths))
+	for i, path := range filePaths {
+		doc, err := vex.Load(path)
+		if err != nil {
+			return nil, fmt.Errorf("error loading file: %w", err)
+		}
+		vexes[i] = doc
+	}
+	return vexes, nil
 }
