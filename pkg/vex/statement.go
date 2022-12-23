@@ -21,17 +21,17 @@ type Statement struct {
 	//
 	// [vul_id] MAY be URIs or URLs.
 	// [vul_id] MAY be arbitrary and MAY be created by the VEX statement [author].
-	Vulnerability   string `json:"vulnerability"`
+	Vulnerability   string `json:"vulnerability,omitempty"`
 	VulnDescription string `json:"vuln_description,omitempty"`
 
 	// Timestamp is the time at which the information expressed in the Statement
 	// was known to be true.
-	Timestamp time.Time `json:"timestamp"`
+	Timestamp time.Time `json:"timestamp,omitempty"`
 
 	// ProductIdentifiers
 	// Product details MUST specify what Status applies to.
 	// Product details MUST include [product_id] and MAY include [subcomponent_id].
-	Products      []string `json:"products"`
+	Products      []string `json:"products,omitempty"`
 	Subcomponents []string `json:"subcomponents,omitempty"`
 
 	// A VEX statement MUST provide Status of the vulnerabilities with respect to the
