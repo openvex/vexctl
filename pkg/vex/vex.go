@@ -34,12 +34,11 @@ type VEX struct {
 }
 
 type Metadata struct {
-	ID                 string    `json:"id"`                // Identifier string for the VEX document
-	Format             string    `json:"format"`            // VEX Format Identifier
-	Author             string    `json:"author"`            // Document author
-	AuthorRole         string    `json:"role"`              // Role of author
-	ProductIdentifiers []string  `json:"product,omitempty"` // For spec completeness
-	Timestamp          time.Time `json:"timestamp"`
+	ID         string    `json:"id"`     // Identifier string for the VEX document
+	Format     string    `json:"format"` // VEX Format Identifier
+	Author     string    `json:"author"` // Document author
+	AuthorRole string    `json:"role"`   // Role of author
+	Timestamp  time.Time `json:"timestamp"`
 }
 
 // VulnerabilityReference captures other identifier assigned to the CVE
@@ -51,9 +50,8 @@ type VulnerabilityReference struct {
 func New() VEX {
 	return VEX{
 		Metadata: Metadata{
-			Format:             formatIdentifier,
-			ProductIdentifiers: []string{},
-			Timestamp:          time.Now(),
+			Format:    formatIdentifier,
+			Timestamp: time.Now(),
 		},
 		Statements: []Statement{},
 	}
@@ -142,11 +140,10 @@ func OpenCSAF(path string, products []string) (*VEX, error) {
 	// Create the vex doc
 	v := &VEX{
 		Metadata: Metadata{
-			ID:                 csafDoc.Document.Tracking.ID,
-			Author:             "",
-			AuthorRole:         "",
-			ProductIdentifiers: products,
-			Timestamp:          time.Time{},
+			ID:         csafDoc.Document.Tracking.ID,
+			Author:     "",
+			AuthorRole: "",
+			Timestamp:  time.Time{},
 		},
 		Statements: []Statement{},
 	}
@@ -177,6 +174,7 @@ func OpenCSAF(path string, products []string) (*VEX, error) {
 						Status:          StatusFromCSAF(status),
 						Justification:   "", // Justifications are not machine readable in csaf, it seems
 						ActionStatement: just,
+						Products:        products,
 					})
 				}
 			}

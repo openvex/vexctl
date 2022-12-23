@@ -54,7 +54,7 @@ type Statement struct {
 	// For "affected" status, a VEX statement MUST include an ActionStatement that
 	// SHOULD describe actions to remediate or mitigate [vul_id].
 	ActionStatement          string    `json:"action_statement,omitempty"`
-	ActionStatementTimeStamp time.Time `json:"action_statement_timestamp,omitempty"`
+	ActionStatementTimestamp time.Time `json:"action_statement_timestamp,omitempty"`
 }
 
 // Validate checks to see whether the given Statement is valid. If it's not, an
