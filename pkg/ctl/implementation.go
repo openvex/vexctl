@@ -281,7 +281,8 @@ type MergeOptions struct {
 }
 
 func (impl *defaultVexCtlImplementation) Merge(
-	_ context.Context, mergeOpts *MergeOptions, docs []*vex.VEX) (*vex.VEX, error) {
+	_ context.Context, mergeOpts *MergeOptions, docs []*vex.VEX,
+) (*vex.VEX, error) {
 	if len(docs) == 0 {
 		return nil, fmt.Errorf("at least one vex document is required to merge")
 	}
@@ -337,7 +338,7 @@ func (impl *defaultVexCtlImplementation) Merge(
 
 	for _, doc := range docs {
 	LOOP_STATEMENTS:
-		for _, s := range doc.Statements {
+		for _, s := range doc.Statements { //nolint:gocritic // this IS supposed to copy
 			if len(iProds) > 0 {
 				for _, pid := range s.Products {
 					if _, ok := iProds[pid]; !ok {
@@ -367,8 +368,9 @@ func (impl *defaultVexCtlImplementation) Merge(
 }
 
 // LoadFiles loads multiple vex files from disk
-func (di *defaultVexCtlImplementation) LoadFiles(
-	_ context.Context, filePaths []string) ([]*vex.VEX, error) {
+func (impl *defaultVexCtlImplementation) LoadFiles(
+	_ context.Context, filePaths []string,
+) ([]*vex.VEX, error) {
 	vexes := make([]*vex.VEX, len(filePaths))
 	for i, path := range filePaths {
 		doc, err := vex.Load(path)
