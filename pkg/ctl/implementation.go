@@ -306,13 +306,14 @@ func (impl *defaultVexCtlImplementation) Merge(
 		// Hash the sorted IDs list
 		docID = fmt.Sprintf("merged-vex-%x", h.Sum(nil))
 	}
+	now := time.Now()
 	newDoc := &vex.VEX{
 		Metadata: vex.Metadata{
 			ID:         docID, // TODO
 			Author:     mergeOpts.Author,
 			AuthorRole: mergeOpts.AuthorRole,
 			Format:     vex.MimeType,
-			Timestamp:  time.Now(),
+			Timestamp:  &now,
 		},
 	}
 
@@ -322,7 +323,8 @@ func (impl *defaultVexCtlImplementation) Merge(
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse SOURCE_DATE_EPOCH: %w", err)
 		}
-		newDoc.Metadata.Timestamp = time.Unix(sde, 0)
+		ut := time.Unix(sde, 0)
+		newDoc.Metadata.Timestamp = &ut
 	}
 
 	ss := []vex.Statement{}
@@ -359,7 +361,7 @@ func (impl *defaultVexCtlImplementation) Merge(
 
 	// Sort statements
 	sort.Slice(ss, func(i, j int) bool {
-		return ss[i].Timestamp.Before(ss[j].Timestamp)
+		return ss[i].Timestamp.Before(*(ss[j].Timestamp))
 	})
 
 	newDoc.Statements = ss
