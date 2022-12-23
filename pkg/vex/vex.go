@@ -57,6 +57,19 @@ func New() VEX {
 	}
 }
 
+func Load(path string) (*VEX, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("loading vex file: %w", err)
+	}
+
+	vexDoc := &VEX{}
+	if err := json.Unmarshal(data, vexDoc); err != nil {
+		return nil, fmt.Errorf("unmarshaling VEX document: %w", err)
+	}
+	return vexDoc, nil
+}
+
 func OpenYAML(path string) (*VEX, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

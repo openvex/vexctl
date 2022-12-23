@@ -122,3 +122,27 @@ func (vexctl *VexCtl) VexFromURI(ctx context.Context, uri string) (vexData *vex.
 	}
 	return vexData, err
 }
+
+// Merge combines several documents into one
+func (vexctl *VexCtl) Merge(ctx context.Context, opts *MergeOptions, vexes []*vex.VEX) (*vex.VEX, error) {
+	doc, err := vexctl.impl.Merge(ctx, opts, vexes)
+	if err != nil {
+		return nil, fmt.Errorf("merging %d documents: %w", len(vexes), err)
+	}
+	return doc, nil
+}
+
+// MergeFiles is like Merge but takes filepaths instead of actual VEX documents
+func (vexctl *VexCtl) MergeFiles(ctx context.Context, opts *MergeOptions, filePaths []string) (*vex.VEX, error) {
+	vexes, err := vexctl.impl.LoadFiles(ctx, filePaths)
+	if err != nil {
+		return nil, fmt.Errorf("loading files: %w", err)
+	}
+
+	// Merge'em Dano
+	doc, err := vexctl.impl.Merge(ctx, opts, vexes)
+	if err != nil {
+		return nil, fmt.Errorf("merging %d documents: %w", len(vexes), err)
+	}
+	return doc, nil
+}

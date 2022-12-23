@@ -51,6 +51,7 @@ func init() {
 
 	addFilter(rootCmd)
 	addAttest(rootCmd)
+	addMerge(rootCmd)
 	rootCmd.AddCommand(version.WithFont("doom"))
 }
 

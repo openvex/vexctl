@@ -8,11 +8,17 @@ package ctl
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	gosarif "github.com/owenrumney/go-sarif/sarif"
@@ -42,6 +48,8 @@ type Implementation interface {
 	Attach(context.Context, *attestation.Attestation, string) error
 	SourceType(uri string) (string, error)
 	ReadImageAttestations(context.Context, Options, string) ([]*vex.VEX, error)
+	Merge(context.Context, *MergeOptions, []*vex.VEX) (*vex.VEX, error)
+	LoadFiles(context.Context, []string) ([]*vex.VEX, error)
 }
 
 type defaultVexCtlImplementation struct{}
@@ -262,4 +270,114 @@ func (impl *defaultVexCtlImplementation) ReadSignedVEX(dssePayload cosign.Attest
 	}
 
 	return &att.Predicate, nil
+}
+
+type MergeOptions struct {
+	DocumentID      string   // ID to use in the new document
+	Author          string   // Author to use in the new document
+	AuthorRole      string   // Role of the document author
+	Products        []string // Product IDs to consider
+	Vulnerabilities []string // IDs of vulnerabilities to merge
+}
+
+func (impl *defaultVexCtlImplementation) Merge(
+	_ context.Context, mergeOpts *MergeOptions, docs []*vex.VEX,
+) (*vex.VEX, error) {
+	if len(docs) == 0 {
+		return nil, fmt.Errorf("at least one vex document is required to merge")
+	}
+
+	docID := mergeOpts.DocumentID
+	// If no document id is specified we compute a
+	// deterministic ID using the merged docs
+	if docID == "" {
+		ids := []string{}
+		for i, d := range docs {
+			if d.ID == "" {
+				ids = append(ids, fmt.Sprintf("VEX-DOC-%d", i))
+			} else {
+				ids = append(ids, d.ID)
+			}
+		}
+
+		sort.Strings(ids)
+		h := sha256.New()
+		h.Write([]byte(strings.Join(ids, ":")))
+		// Hash the sorted IDs list
+		docID = fmt.Sprintf("merged-vex-%x", h.Sum(nil))
+	}
+	newDoc := &vex.VEX{
+		Metadata: vex.Metadata{
+			ID:         docID, // TODO
+			Author:     mergeOpts.Author,
+			AuthorRole: mergeOpts.AuthorRole,
+			Format:     vex.MimeType,
+			Timestamp:  time.Now(),
+		},
+	}
+
+	// Support envvar for reproducible vexing
+	if d := os.Getenv("SOURCE_DATE_EPOCH"); d != "" {
+		sde, err := strconv.ParseInt(d, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse SOURCE_DATE_EPOCH: %w", err)
+		}
+		newDoc.Metadata.Timestamp = time.Unix(sde, 0)
+	}
+
+	ss := []vex.Statement{}
+
+	iProds := map[string]struct{}{}
+	iVulns := map[string]struct{}{}
+	for _, id := range mergeOpts.Products {
+		iProds[id] = struct{}{}
+	}
+	for _, id := range mergeOpts.Vulnerabilities {
+		iVulns[id] = struct{}{}
+	}
+
+	for _, doc := range docs {
+	LOOP_STATEMENTS:
+		for _, s := range doc.Statements { //nolint:gocritic // this IS supposed to copy
+			if len(iProds) > 0 {
+				for _, pid := range s.Products {
+					if _, ok := iProds[pid]; !ok {
+						continue LOOP_STATEMENTS
+					}
+				}
+			}
+
+			if len(iVulns) > 0 {
+				if _, ok := iProds[s.Vulnerability]; !ok {
+					continue LOOP_STATEMENTS
+				}
+			}
+
+			ss = append(ss, s)
+		}
+	}
+
+	// Sort statements
+	sort.Slice(ss, func(i, j int) bool {
+		return ss[i].Timestamp.Before(ss[j].Timestamp)
+	})
+
+	newDoc.Statements = ss
+
+	return newDoc, nil
+}
+
+// LoadFiles loads multiple vex files from disk
+func (impl *defaultVexCtlImplementation) LoadFiles(
+	_ context.Context, filePaths []string,
+) ([]*vex.VEX, error) {
+	vexes := make([]*vex.VEX, len(filePaths))
+	for i, path := range filePaths {
+		doc, err := vex.Load(path)
+		if err != nil {
+			return nil, fmt.Errorf("error loading file: %w", err)
+		}
+		vexes[i] = doc
+	}
+	return vexes, nil
 }
