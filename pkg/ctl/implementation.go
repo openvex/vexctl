@@ -46,8 +46,8 @@ type Implementation interface {
 	Attach(context.Context, *attestation.Attestation, string) error
 	SourceType(uri string) (string, error)
 	ReadImageAttestations(context.Context, Options, string) ([]*vex.VEX, error)
-	Merge(MergeOptions, []*vex.VEX) (*vex.VEX, error)
-	LoadFiles([]string) ([]*vex.VEX, error)
+	Merge(context.Context, *MergeOptions, []*vex.VEX) (*vex.VEX, error)
+	LoadFiles(context.Context, []string) ([]*vex.VEX, error)
 }
 
 type defaultVexCtlImplementation struct{}
@@ -275,7 +275,8 @@ type MergeOptions struct {
 	Vulnerabilities []string // IDs of vulnerabilities to merge
 }
 
-func (impl *defaultVexCtlImplementation) Merge(mergeOpts MergeOptions, docs []*vex.VEX) (*vex.VEX, error) {
+func (impl *defaultVexCtlImplementation) Merge(
+	_ context.Context, mergeOpts *MergeOptions, docs []*vex.VEX) (*vex.VEX, error) {
 	if len(docs) == 0 {
 		return nil, fmt.Errorf("at least one vex document is required to merge")
 	}
@@ -340,7 +341,8 @@ func (impl *defaultVexCtlImplementation) Merge(mergeOpts MergeOptions, docs []*v
 }
 
 // LoadFiles loads multiple vex files from disk
-func (di *defaultVexCtlImplementation) LoadFiles(filePaths []string) ([]*vex.VEX, error) {
+func (di *defaultVexCtlImplementation) LoadFiles(
+	_ context.Context, filePaths []string) ([]*vex.VEX, error) {
 	vexes := make([]*vex.VEX, len(filePaths))
 	for i, path := range filePaths {
 		doc, err := vex.Load(path)

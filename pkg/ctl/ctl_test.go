@@ -1,6 +1,7 @@
 package ctl
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,6 +30,7 @@ func TestVexReport(t *testing.T) {
 }
 
 func TestMerge(t *testing.T) {
+	ctx := context.Background()
 	doc1, err := vex.Load("testdata/document1.vex.json")
 	require.NoError(t, err)
 	doc2, err := vex.Load("testdata/document1.vex.json")
@@ -69,7 +71,7 @@ func TestMerge(t *testing.T) {
 			shouldErr: false,
 		},
 	} {
-		doc, err := impl.Merge(tc.opts, tc.docs)
+		doc, err := impl.Merge(ctx, &tc.opts, tc.docs)
 		if tc.shouldErr {
 			require.Error(t, err)
 			continue
