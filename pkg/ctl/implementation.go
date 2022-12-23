@@ -8,6 +8,7 @@ package ctl
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -271,6 +273,9 @@ func (impl *defaultVexCtlImplementation) ReadSignedVEX(dssePayload cosign.Attest
 }
 
 type MergeOptions struct {
+	DocumentID      string   // ID to use in the new document
+	Author          string   // Author to use in the new document
+	AuthorRole      string   // Role of the document author
 	Products        []string // Product IDs to consider
 	Vulnerabilities []string // IDs of vulnerabilities to merge
 }
@@ -280,12 +285,33 @@ func (impl *defaultVexCtlImplementation) Merge(
 	if len(docs) == 0 {
 		return nil, fmt.Errorf("at least one vex document is required to merge")
 	}
+
+	docID := mergeOpts.DocumentID
+	// If no document id is specified we compute a
+	// deterministic ID using the merged docs
+	if docID == "" {
+		ids := []string{}
+		for i, d := range docs {
+			if d.ID == "" {
+				ids = append(ids, fmt.Sprintf("VEX-DOC-%d", i))
+			} else {
+				ids = append(ids, d.ID)
+			}
+		}
+
+		sort.Strings(ids)
+		h := sha256.New()
+		h.Write([]byte(strings.Join(ids, ":")))
+		// Hash the sorted IDs list
+		docID = fmt.Sprintf("merged-vex-%x", h.Sum(nil))
+	}
 	newDoc := &vex.VEX{
 		Metadata: vex.Metadata{
-			ID:                 "", // TODO
-			Format:             vex.MimeType,
-			ProductIdentifiers: []string{},
-			Timestamp:          time.Now(),
+			ID:         docID, // TODO
+			Author:     mergeOpts.Author,
+			AuthorRole: mergeOpts.AuthorRole,
+			Format:     vex.MimeType,
+			Timestamp:  time.Now(),
 		},
 	}
 

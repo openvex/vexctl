@@ -58,6 +58,27 @@ Examples:
 		},
 	}
 
+	mergeCmd.PersistentFlags().StringVar(
+		&opts.DocumentID,
+		"docid",
+		"",
+		"ID for the new VEX document (default will be computed)",
+	)
+
+	mergeCmd.PersistentFlags().StringVar(
+		&opts.Author,
+		"author",
+		"unknown",
+		"author to record in the new document",
+	)
+
+	mergeCmd.PersistentFlags().StringVar(
+		&opts.AuthorRole,
+		"author-role",
+		"document creator",
+		"author role to record in the new document",
+	)
+
 	mergeCmd.PersistentFlags().StringSliceVar(
 		&opts.Vulnerabilities,
 		"vuln",
