@@ -26,7 +26,7 @@ type Statement struct {
 
 	// Timestamp is the time at which the information expressed in the Statement
 	// was known to be true.
-	Timestamp time.Time `json:"timestamp,omitempty"`
+	Timestamp *time.Time `json:"timestamp,omitempty"`
 
 	// ProductIdentifiers
 	// Product details MUST specify what Status applies to.
@@ -53,8 +53,8 @@ type Statement struct {
 
 	// For "affected" status, a VEX statement MUST include an ActionStatement that
 	// SHOULD describe actions to remediate or mitigate [vul_id].
-	ActionStatement          string    `json:"action_statement,omitempty"`
-	ActionStatementTimestamp time.Time `json:"action_statement_timestamp,omitempty"`
+	ActionStatement          string     `json:"action_statement,omitempty"`
+	ActionStatementTimestamp *time.Time `json:"action_statement_timestamp,omitempty"`
 }
 
 // Validate checks to see whether the given Statement is valid. If it's not, an
@@ -101,15 +101,23 @@ func SortStatements(stmts []Statement, documentTimestamp time.Time) {
 		// i.e. the same vulnerability; sort statements by timestamp
 
 		iTime := stmts[i].Timestamp
-		if iTime.IsZero() {
-			iTime = documentTimestamp
+		if iTime == nil || iTime.IsZero() {
+			iTime = &documentTimestamp
 		}
 
 		jTime := stmts[j].Timestamp
-		if jTime.IsZero() {
-			jTime = documentTimestamp
+		if jTime == nil || jTime.IsZero() {
+			jTime = &documentTimestamp
 		}
 
-		return iTime.Before(jTime)
+		if iTime == nil {
+			return false
+		}
+
+		if jTime == nil {
+			return true
+		}
+
+		return iTime.Before(*jTime)
 	})
 }

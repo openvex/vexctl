@@ -34,11 +34,11 @@ type VEX struct {
 }
 
 type Metadata struct {
-	ID         string    `json:"id"`     // Identifier string for the VEX document
-	Format     string    `json:"format"` // VEX Format Identifier
-	Author     string    `json:"author"` // Document author
-	AuthorRole string    `json:"role"`   // Role of author
-	Timestamp  time.Time `json:"timestamp"`
+	ID         string     `json:"id"`     // Identifier string for the VEX document
+	Format     string     `json:"format"` // VEX Format Identifier
+	Author     string     `json:"author"` // Document author
+	AuthorRole string     `json:"role"`   // Role of author
+	Timestamp  *time.Time `json:"timestamp"`
 }
 
 // VulnerabilityReference captures other identifier assigned to the CVE
@@ -48,10 +48,11 @@ type VulnerabilityReference struct {
 }
 
 func New() VEX {
+	now := time.Now()
 	return VEX{
 		Metadata: Metadata{
 			Format:    formatIdentifier,
-			Timestamp: time.Now(),
+			Timestamp: &now,
 		},
 		Statements: []Statement{},
 	}
@@ -121,9 +122,15 @@ func (vexDoc *VEX) StatementFromID(id string) *Statement {
 // Sort sorts a bunch of documents based on their date. VEXes should
 // be applied sequentially in chronogical order as they capture knowledge about an
 // artifact as it changes over time.
-func Sort(docs []*VEX) []*VEX {
+func SortDocuments(docs []*VEX) []*VEX {
 	sort.Slice(docs, func(i, j int) bool {
-		return docs[i].Timestamp.Before(docs[j].Timestamp)
+		if docs[j].Timestamp == nil {
+			return true
+		}
+		if docs[i].Timestamp == nil {
+			return false
+		}
+		return docs[i].Timestamp.Before(*(docs[j].Timestamp))
 	})
 	return docs
 }
@@ -156,7 +163,7 @@ func OpenCSAF(path string, products []string) (*VEX, error) {
 			ID:         csafDoc.Document.Tracking.ID,
 			Author:     "",
 			AuthorRole: "",
-			Timestamp:  time.Time{},
+			Timestamp:  &time.Time{},
 		},
 		Statements: []Statement{},
 	}
