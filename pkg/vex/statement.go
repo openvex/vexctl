@@ -101,13 +101,21 @@ func SortStatements(stmts []Statement, documentTimestamp time.Time) {
 		// i.e. the same vulnerability; sort statements by timestamp
 
 		iTime := stmts[i].Timestamp
-		if iTime.IsZero() {
+		if iTime == nil || iTime.IsZero() {
 			iTime = &documentTimestamp
 		}
 
 		jTime := stmts[j].Timestamp
-		if jTime.IsZero() {
+		if jTime == nil || jTime.IsZero() {
 			jTime = &documentTimestamp
+		}
+
+		if iTime == nil {
+			return false
+		}
+
+		if jTime == nil {
+			return true
 		}
 
 		return iTime.Before(*jTime)

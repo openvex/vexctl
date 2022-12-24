@@ -122,8 +122,14 @@ func (vexDoc *VEX) StatementFromID(id string) *Statement {
 // Sort sorts a bunch of documents based on their date. VEXes should
 // be applied sequentially in chronogical order as they capture knowledge about an
 // artifact as it changes over time.
-func Sort(docs []*VEX) []*VEX {
+func SortDocuments(docs []*VEX) []*VEX {
 	sort.Slice(docs, func(i, j int) bool {
+		if docs[j].Timestamp == nil {
+			return true
+		}
+		if docs[i].Timestamp == nil {
+			return false
+		}
 		return docs[i].Timestamp.Before(*(docs[j].Timestamp))
 	})
 	return docs
