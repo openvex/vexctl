@@ -61,7 +61,7 @@ func init() {
 }
 
 func (impl *defaultVexCtlImplementation) SortDocuments(docs []*vex.VEX) []*vex.VEX {
-	return vex.Sort(docs)
+	return vex.SortDocuments(docs)
 }
 
 func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, vexDoc *vex.VEX) (*sarif.Report, error) {
@@ -125,7 +125,7 @@ func (impl *defaultVexCtlImplementation) OpenVexData(opts Options, paths []strin
 }
 
 func (impl *defaultVexCtlImplementation) Sort(docs []*vex.VEX) []*vex.VEX {
-	return vex.Sort(docs)
+	return vex.SortDocuments(docs)
 }
 
 func (impl *defaultVexCtlImplementation) AttestationBytes(att *attestation.Attestation) ([]byte, error) {
@@ -359,10 +359,7 @@ func (impl *defaultVexCtlImplementation) Merge(
 		}
 	}
 
-	// Sort statements
-	sort.Slice(ss, func(i, j int) bool {
-		return ss[i].Timestamp.Before(*(ss[j].Timestamp))
-	})
+	vex.SortStatements(ss, *newDoc.Metadata.Timestamp)
 
 	newDoc.Statements = ss
 
