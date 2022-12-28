@@ -280,6 +280,8 @@ type MergeOptions struct {
 	Vulnerabilities []string // IDs of vulnerabilities to merge
 }
 
+// Merge combines the statements from a number of documents into
+// a new one, preserving time context from each of them.
 func (impl *defaultVexCtlImplementation) Merge(
 	_ context.Context, mergeOpts *MergeOptions, docs []*vex.VEX,
 ) (*vex.VEX, error) {
@@ -353,6 +355,16 @@ func (impl *defaultVexCtlImplementation) Merge(
 				if _, ok := iProds[s.Vulnerability]; !ok {
 					continue LOOP_STATEMENTS
 				}
+			}
+
+			// If statement does not have a timestamp, cascade
+			// the timestamp down from the document.
+			// See https://github.com/chainguard-dev/vex/issues/49
+			if s.Timestamp == nil {
+				if doc.Timestamp == nil {
+					return nil, errors.New("unable to cascade timestamp from doc to timeless statement")
+				}
+				s.Timestamp = doc.Timestamp
 			}
 
 			ss = append(ss, s)
