@@ -26,6 +26,12 @@ const (
 
 	// MIME type to record in the attestations
 	MimeType = "text/vex"
+
+	// Default author for documents
+	DefaultAuthor = "Unknown Author"
+
+	// DefaultRole to list when not having a role
+	DefaultRole = "Document Creator"
 )
 
 type VEX struct {
