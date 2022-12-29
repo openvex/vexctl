@@ -13,10 +13,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -319,14 +317,13 @@ func (impl *defaultVexCtlImplementation) Merge(
 		},
 	}
 
-	// Support envvar for reproducible vexing
-	if d := os.Getenv("SOURCE_DATE_EPOCH"); d != "" {
-		sde, err := strconv.ParseInt(d, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse SOURCE_DATE_EPOCH: %w", err)
-		}
-		ut := time.Unix(sde, 0)
-		newDoc.Metadata.Timestamp = &ut
+	t, err := vex.DateFromEnv()
+	if err != nil {
+		return nil, fmt.Errorf("reading date from env: %w", err)
+	}
+
+	if t != nil {
+		newDoc.Metadata.Timestamp = t
 	}
 
 	ss := []vex.Statement{}
