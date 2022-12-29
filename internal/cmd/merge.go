@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"chainguard.dev/vex/pkg/ctl"
+	"chainguard.dev/vex/pkg/vex"
 )
 
 type mergeOptions struct {
@@ -68,14 +69,14 @@ Examples:
 	mergeCmd.PersistentFlags().StringVar(
 		&opts.Author,
 		"author",
-		"unknown",
+		vex.DefaultAuthor,
 		"author to record in the new document",
 	)
 
 	mergeCmd.PersistentFlags().StringVar(
 		&opts.AuthorRole,
 		"author-role",
-		"document creator",
+		vex.DefaultRole,
 		"author role to record in the new document",
 	)
 
