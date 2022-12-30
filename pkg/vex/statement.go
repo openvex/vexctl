@@ -65,22 +65,64 @@ func (stmt Statement) Validate() error { //nolint:gocritic // turning off for ru
 		return fmt.Errorf("invalid status value %q, must be one of [%s]", s, strings.Join(Statuses(), ", "))
 	}
 
-	if stmt.Status == StatusNotAffected {
+	switch s := stmt.Status; s {
+	case StatusNotAffected:
 		// require a justification
 		j := stmt.Justification
 		if j == "" {
-			return fmt.Errorf("justification missing, it's required when using status %q", StatusNotAffected)
+			return fmt.Errorf("justification missing, it's required when using status %q", s)
 		}
 
 		if !j.Valid() {
 			return fmt.Errorf("invalid justification value %q, must be one of [%s]", j, strings.Join(Justifications(), ", "))
 		}
-	}
 
-	if stmt.Status == StatusAffected {
+		// irrelevant fields should not be set
+		if v := stmt.ActionStatement; v != "" {
+			return fmt.Errorf("action statement should not be set when using status %q (was set to %q)", s, v)
+		}
+
+	case StatusAffected:
 		// require an action statement
 		if stmt.ActionStatement == "" {
-			return fmt.Errorf("action statement missing, it's required when using status %q", StatusAffected)
+			return fmt.Errorf("action statement missing, it's required when using status %q", s)
+		}
+
+		// irrelevant fields should not be set
+		if v := stmt.Justification; v != "" {
+			return fmt.Errorf("justification should not be set when using status %q (was set to %q)", s, v)
+		}
+
+		if v := stmt.ImpactStatement; v != "" {
+			return fmt.Errorf("impact statement should not be set when using status %q (was set to %q)", s, v)
+		}
+
+	case StatusUnderInvestigation:
+		// irrelevant fields should not be set
+		if v := stmt.Justification; v != "" {
+			return fmt.Errorf("justification should not be set when using status %q (was set to %q)", s, v)
+		}
+
+		if v := stmt.ImpactStatement; v != "" {
+			return fmt.Errorf("impact statement should not be set when using status %q (was set to %q)", s, v)
+		}
+
+		if v := stmt.ActionStatement; v != "" {
+			return fmt.Errorf("action statement should not be set when using status %q (was set to %q)", s, v)
+		}
+
+	case StatusFixed:
+		// irrelevant fields should not be set
+		if v := stmt.Justification; v != "" {
+			return fmt.Errorf("justification should not be set when using status %q (was set to %q)", s, v)
+		}
+
+		if v := stmt.ImpactStatement; v != "" {
+			return fmt.Errorf("impact statement should not be set when using status %q (was set to %q)", s, v)
+		}
+
+		if v := stmt.ActionStatement; v != "" {
+			return fmt.Errorf("action statement should not be set when using status %q (was set to %q)", s, v)
 		}
 	}
 
