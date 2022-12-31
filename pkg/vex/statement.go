@@ -51,7 +51,7 @@ type Statement struct {
 	// that contains a description why the vulnerability cannot be exploited.
 	ImpactStatement string `json:"impact_statement,omitempty"`
 
-	// For "affected" status, a VEX statement MUST include an ActionStatement that
+	// For "affected" status, a VEX statement MAY include an ActionStatement that
 	// SHOULD describe actions to remediate or mitigate [vul_id].
 	ActionStatement          string     `json:"action_statement,omitempty"`
 	ActionStatementTimestamp *time.Time `json:"action_statement_timestamp,omitempty"`
@@ -83,11 +83,6 @@ func (stmt Statement) Validate() error { //nolint:gocritic // turning off for ru
 		}
 
 	case StatusAffected:
-		// require an action statement
-		if stmt.ActionStatement == "" {
-			return fmt.Errorf("action statement missing, it's required when using status %q", s)
-		}
-
 		// irrelevant fields should not be set
 		if v := stmt.Justification; v != "" {
 			return fmt.Errorf("justification should not be set when using status %q (was set to %q)", s, v)
