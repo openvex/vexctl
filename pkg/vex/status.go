@@ -5,6 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package vex
 
+// Status describes the exploitability status of a component with respect to a
+// vulnerability.
 type Status string
 
 const (

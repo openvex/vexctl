@@ -5,6 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package vex
 
+// Justification describes why a given component is not affected by a
+// vulnerability.
 type Justification string
 
 const (
@@ -40,7 +42,9 @@ const (
 	// disabled by the user. These mitigations completely prevent exploitation based
 	// on known attack vectors.
 	//
-	// This justification could be difficult to prove conclusively. History is littered with examples of mitigation bypasses, typically involving minor modifications of existing exploit code.
+	// This justification could be difficult to prove conclusively. History is
+	// littered with examples of mitigation bypasses, typically involving minor
+	// modifications of existing exploit code.
 	InlineMitigationsAlreadyExist Justification = "inline_mitigations_already_exist"
 )
 
@@ -55,7 +59,8 @@ func Justifications() []string {
 	}
 }
 
-// Valid returns a bool indicating whether the Justification value is equal to one of the enumerated allowed values for Justification.
+// Valid returns a bool indicating whether the Justification value is equal to
+// one of the enumerated allowed values for Justification.
 func (j Justification) Valid() bool {
 	switch j {
 	case ComponentNotPresent,

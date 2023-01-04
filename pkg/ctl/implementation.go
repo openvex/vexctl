@@ -265,7 +265,7 @@ func (impl *defaultVexCtlImplementation) ReadSignedVEX(dssePayload cosign.Attest
 		return nil, fmt.Errorf("unmarshalling attestation JSON: %w", err)
 	}
 
-	if att.PredicateType != vex.MimeType {
+	if att.PredicateType != vex.TypeURI {
 		return nil, nil
 	}
 
@@ -314,7 +314,7 @@ func (impl *defaultVexCtlImplementation) Merge(
 			ID:         docID, // TODO
 			Author:     mergeOpts.Author,
 			AuthorRole: mergeOpts.AuthorRole,
-			Format:     vex.MimeType,
+			Format:     vex.TypeURI,
 			Timestamp:  &now,
 		},
 	}
