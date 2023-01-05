@@ -22,9 +22,6 @@ import (
 )
 
 const (
-	// formatIdentifier is the identifier value used in a VEX document's Format field.
-	formatIdentifier = "text/vex+json"
-
 	// TypeURI is the type used to describe VEX documents, e.g. within [in-toto
 	// statements].
 	//
@@ -49,9 +46,6 @@ type Metadata struct {
 	// ID is the identifying string for the VEX document. This should be unique per
 	// document.
 	ID string `json:"id"`
-
-	// Format describes the format of this VEX document.
-	Format string `json:"format"`
 
 	// Author is the identifier for the author of the VEX statement, ideally a common
 	// name, may be a URI. [author] is an individual or organization. [author]
@@ -84,7 +78,6 @@ func New() VEX {
 	}
 	return VEX{
 		Metadata: Metadata{
-			Format:    formatIdentifier,
 			Timestamp: &now,
 		},
 		Statements: []Statement{},
