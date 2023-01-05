@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -74,6 +75,13 @@ type VulnerabilityReference struct {
 // New returns a new, initialized VEX document.
 func New() VEX {
 	now := time.Now()
+	t, err := DateFromEnv()
+	if err != nil {
+		logrus.Warn(err)
+	}
+	if t != nil {
+		now = *t
+	}
 	return VEX{
 		Metadata: Metadata{
 			Format:    formatIdentifier,
@@ -231,4 +239,24 @@ func OpenCSAF(path string, products []string) (*VEX, error) {
 	}
 
 	return v, nil
+}
+
+func DateFromEnv() (*time.Time, error) {
+	// Support envvar for reproducible vexing
+	d := os.Getenv("SOURCE_DATE_EPOCH")
+	if d == "" {
+		return nil, nil
+	}
+
+	var t time.Time
+	sec, err := strconv.ParseInt(d, 10, 64)
+	if err == nil {
+		t = time.Unix(sec, 0)
+	} else {
+		t, err = time.Parse(time.RFC3339, d)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse envvar SOURCE_DATE_EPOCH: %w", err)
+		}
+	}
+	return &t, nil
 }
