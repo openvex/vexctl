@@ -312,7 +312,6 @@ func (impl *defaultVexCtlImplementation) Merge(
 			ID:         docID, // TODO
 			Author:     mergeOpts.Author,
 			AuthorRole: mergeOpts.AuthorRole,
-			Format:     vex.TypeURI,
 			Timestamp:  &now,
 		},
 	}
