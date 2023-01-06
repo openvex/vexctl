@@ -58,12 +58,19 @@ type Metadata struct {
 
 	// Timestamp defines the time at which the document was issued.
 	Timestamp *time.Time `json:"timestamp"`
-}
 
-// VulnerabilityReference captures other identifier assigned to the CVE.
-type VulnerabilityReference struct {
-	RefType   string `json:"type"` // URL, OSV, FEDORA, etc
-	Reference string `reference:"ref"`
+	// Version is the document version. It must be incremented when any content
+	// within the VEX document changes, including any VEX statements included within
+	// the VEX document.
+	Version string `json:"version"`
+
+	// Tooling expresses how the VEX document and contained VEX statements were
+	// generated. It's optional. It may specify tools or automated processes used in
+	// the document or statement generation.
+	Tooling string `json:"tooling,omitempty"`
+
+	// Supplier is an optional field.
+	Supplier string `json:"supplier,omitempty"`
 }
 
 // New returns a new, initialized VEX document.
