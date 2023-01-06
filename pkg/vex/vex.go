@@ -85,6 +85,7 @@ func New() VEX {
 	}
 	return VEX{
 		Metadata: Metadata{
+			Version:   "1",
 			Timestamp: &now,
 		},
 		Statements: []Statement{},
