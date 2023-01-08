@@ -19,6 +19,7 @@ import (
 type createOptions struct {
 	vexDocOptions
 	vexStatementOptions
+	outFilePath string
 }
 
 // Validates the options in context with arguments
@@ -74,7 +75,7 @@ func (o *createOptions) Validate(args []string) error {
 
 func addCreate(parentCmd *cobra.Command) {
 	opts := createOptions{}
-	mergeCmd := &cobra.Command{
+	createCmd := &cobra.Command{
 		Short: fmt.Sprintf("%s create: creates a new VEX document", appname),
 		Long: fmt.Sprintf(`%s create: creates a new VEX document
 
@@ -146,38 +147,54 @@ Examples:
 				ImpactStatement: opts.ImpactStatement,
 			}
 			newDoc.Statements = append(newDoc.Statements, statement)
+			if _, err := newDoc.GenerateCanonicalID(); err != nil {
+				return fmt.Errorf("generating document id: %w", err)
+			}
 
 			out := os.Stdout
 
+			if opts.outFilePath != "" {
+				f, err := os.Create(opts.outFilePath)
+				if err != nil {
+					return fmt.Errorf("opening vex file to write document: %w", err)
+				}
+				out = f
+				defer f.Close()
+			}
+
 			if err := newDoc.ToJSON(out); err != nil {
 				return fmt.Errorf("writing new vex document: %w", err)
+			}
+
+			if opts.outFilePath != "" {
+				fmt.Fprintf(os.Stderr, " > VEX document written to %s\n", opts.outFilePath)
 			}
 			return nil
 		},
 	}
 
-	mergeCmd.PersistentFlags().StringVar(
+	createCmd.PersistentFlags().StringVar(
 		&opts.DocumentID,
 		"id",
 		"",
 		"ID for the new VEX document (default will be computed)",
 	)
 
-	mergeCmd.PersistentFlags().StringVar(
+	createCmd.PersistentFlags().StringVar(
 		&opts.Author,
 		"author",
 		vex.DefaultAuthor,
 		"author to record in the new document",
 	)
 
-	mergeCmd.PersistentFlags().StringVar(
+	createCmd.PersistentFlags().StringVar(
 		&opts.AuthorRole,
 		"author-role",
 		vex.DefaultRole,
 		"author role to record in the new document",
 	)
 
-	mergeCmd.PersistentFlags().StringVarP(
+	createCmd.PersistentFlags().StringVarP(
 		&opts.Vulnerability,
 		"vuln",
 		"v",
@@ -185,7 +202,7 @@ Examples:
 		"vulnerability to add to the statement (eg CVE-2023-12345)",
 	)
 
-	mergeCmd.PersistentFlags().StringSliceVarP(
+	createCmd.PersistentFlags().StringSliceVarP(
 		&opts.Products,
 		"product",
 		"p",
@@ -193,7 +210,7 @@ Examples:
 		"list of products to list in the statement, at least one is required",
 	)
 
-	mergeCmd.PersistentFlags().StringVarP(
+	createCmd.PersistentFlags().StringVarP(
 		&opts.Status,
 		"status",
 		"s",
@@ -201,14 +218,14 @@ Examples:
 		fmt.Sprintf("status of the product vs the vulnerability, see %s show statuses for list", appname),
 	)
 
-	mergeCmd.PersistentFlags().StringSliceVar(
+	createCmd.PersistentFlags().StringSliceVar(
 		&opts.Products,
 		"subcomponents",
 		[]string{},
 		"list of subcomponents to add to the statement",
 	)
 
-	mergeCmd.PersistentFlags().StringVarP(
+	createCmd.PersistentFlags().StringVarP(
 		&opts.Justification,
 		"justification",
 		"j",
@@ -216,9 +233,12 @@ Examples:
 		fmt.Sprintf("justification for not_affected status, see %s show justifications for list", appname),
 	)
 
-	mergeCmd.MarkFlagRequired("products") //nolint:errcheck
-	mergeCmd.MarkFlagRequired("vuln")     //nolint:errcheck
-	mergeCmd.MarkFlagRequired("status")   //nolint:errcheck
+	createCmd.PersistentFlags().StringVar(
+		&opts.outFilePath,
+		"file",
+		"",
+		"file to write the document (default is STDOUT)",
+	)
 
-	parentCmd.AddCommand(mergeCmd)
+	parentCmd.AddCommand(createCmd)
 }

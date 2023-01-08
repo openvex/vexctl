@@ -287,7 +287,6 @@ func (vexDoc *VEX) CanonicalHash() (string, error) {
 	if _, err := h.Write([]byte(cString)); err != nil {
 		return "", fmt.Errorf("hashing canonicalization string: %w", err)
 	}
-	fmt.Println(cString)
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
