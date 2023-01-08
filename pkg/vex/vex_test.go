@@ -29,33 +29,34 @@ func TestLoadCSAF(t *testing.T) {
 	require.Equal(t, vexDoc.Metadata.ID, "2022-EVD-UC-01-NA-001")
 }
 
-func TestCanonicalHash(t *testing.T) {
-	goldenHash := `461bb1de8d85c7a6af96edf24d0e0672726d248500e63c5413f89db0c6710fa0`
+func genTestDoc(t *testing.T) VEX {
 	ts, err := time.Parse(time.RFC3339, "2022-12-22T16:36:43-05:00")
 	require.NoError(t, err)
+	return VEX{
+		Metadata: Metadata{
+			Author:     "John Doe",
+			AuthorRole: "VEX Writer Extraordinaire",
+			Timestamp:  &ts,
+			Version:    "1",
+			Tooling:    "OpenVEX",
+			Supplier:   "Chainguard Inc",
+		},
+		Statements: []Statement{
+			{
+				Vulnerability:   "CVE-1234-5678",
+				VulnDescription: "",
+				Products:        []string{"pkg:apk/wolfi/bash@1.0.0"},
+				Status:          "under_investigation",
+			},
+		},
+	}
+}
+
+func TestCanonicalHash(t *testing.T) {
+	goldenHash := `461bb1de8d85c7a6af96edf24d0e0672726d248500e63c5413f89db0c6710fa0`
+
 	otherTS, err := time.Parse(time.RFC3339, "2019-01-22T16:36:43-05:00")
 	require.NoError(t, err)
-
-	testDoc := func() VEX {
-		return VEX{
-			Metadata: Metadata{
-				Author:     "John Doe",
-				AuthorRole: "VEX Writer Extraordinaire",
-				Timestamp:  &ts,
-				Version:    "1",
-				Tooling:    "OpenVEX",
-				Supplier:   "Chainguard Inc",
-			},
-			Statements: []Statement{
-				{
-					Vulnerability:   "CVE-1234-5678",
-					VulnDescription: "",
-					Products:        []string{"pkg:apk/wolfi/bash@1.0.0"},
-					Status:          "under_investigation",
-				},
-			},
-		}
-	}
 
 	for i, tc := range []struct {
 		prepare   func(*VEX)
@@ -125,7 +126,7 @@ func TestCanonicalHash(t *testing.T) {
 			false,
 		},
 	} {
-		doc := testDoc()
+		doc := genTestDoc(t)
 		tc.prepare(&doc)
 		hashString, err := doc.CanonicalHash()
 		if tc.shouldErr {
@@ -134,5 +135,29 @@ func TestCanonicalHash(t *testing.T) {
 			require.NoError(t, err)
 		}
 		require.Equal(t, tc.expected, hashString, fmt.Sprintf("Testcase #%d %s", i, doc.Statements[0].Products[0]))
+	}
+}
+
+func TestGenerateCanonicalID(t *testing.T) {
+	for _, tc := range []struct {
+		prepare    func(*VEX)
+		expectedID string
+	}{
+		{
+			// Normal generation
+			prepare:    func(v *VEX) {},
+			expectedID: "VEX-461bb1de8d85c7a6af96edf24d0e0672726d248500e63c5413f89db0c6710fa0",
+		},
+		{
+			// Existing IDs should not be changed
+			prepare:    func(v *VEX) { v.ID = "VEX-ID-THAT-ALREADY-EXISTED" },
+			expectedID: "VEX-ID-THAT-ALREADY-EXISTED",
+		},
+	} {
+		doc := genTestDoc(t)
+		tc.prepare(&doc)
+		id, err := doc.GenerateCanonicalID()
+		require.NoError(t, err)
+		require.Equal(t, tc.expectedID, id)
 	}
 }

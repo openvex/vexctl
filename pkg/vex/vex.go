@@ -306,7 +306,7 @@ func (vexDoc *VEX) GenerateCanonicalID() (string, error) {
 	}
 
 	vexDoc.ID = fmt.Sprintf("VEX-%s", cHash)
-	return "", nil
+	return vexDoc.ID, nil
 }
 
 func DateFromEnv() (*time.Time, error) {
