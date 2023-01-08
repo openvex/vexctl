@@ -78,24 +78,44 @@ func addCreate(parentCmd *cobra.Command) {
 		Short: fmt.Sprintf("%s create: creates a new VEX document", appname),
 		Long: fmt.Sprintf(`%s create: creates a new VEX document
 
-When composing VEX data out of multiple sources it may be necessary to mix
-all statements into a single doc. The merge subcommand mixes the statements
-from one or more vex documents into a single, new one.
+The create subcommand generates a single statement document
+from the command line. This is intended for simple use cases
+or to get a base document to get started.
+
+You can specify multiple products and customize the metadata of
+the document via the command line flags. vexctl will honor the
+SOURCE_DATE_EPOCH environment variable and use that date for 
+the document (it can be formated in unix time or RFC3339).
+
+If you don't specify an ID for the document, one will be generated
+using its canonicalization hash.
 
 Examples:
 
-# Merge two documents into one
-%s merge document1.vex.json document2.vex.json > new.vex.json
+# Generate a document stating that CVE-2023-12345 was fixed in the 
+# git package of Wolfi:
 
-# Merge two documents into one, but only one product
-%s merge --product="pkg:apk/wolfi/bash@1.0" document1.vex.json document2.vex.json 
+%s create "pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64" CVE-2023-12345 fixed
 
-# Merge vulnerability data from two documents into one
-%s merge --vulnerability=CVE-2022-3294 document1.vex.json document2.vex.json 
+# You can specify more than one product. vexctl will read one from
+# the argument but you can control all parameters through command line
+# flags. Here's an example with two products in the same document:
+
+%s create --product="pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64" \
+              --product="pkg:apk/wolfi/git@2.39.0-r1?arch=armv7" \
+              --vuln="CVE-2023-12345"
+              --status="fixed"
+
+# not_affected statements need a justification:
+
+%s create --product="pkg:apk/wolfi/trivy@0.36.1-r0?arch=x86_64"
+              --vuln="CVE-2023-12345"
+              --status="not_affected"
+              --justification="component_not_present"
 
 `, appname, appname, appname, appname),
-		Use:               "create <filename.vex.json>",
-		Example:           fmt.Sprintf("%s create \"pkg:apk/wolfi/trivy@0.36.1-r0?arch=x86_64\" CVE-2022-39260 fixed ", appname),
+		Use:               "create [flags] [product_id [vuln_id [status]]]",
+		Example:           fmt.Sprintf("%s create \"pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64\" CVE-2022-39260 fixed ", appname),
 		SilenceUsage:      false,
 		SilenceErrors:     false,
 		PersistentPreRunE: initLogging,
