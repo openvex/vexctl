@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package vex
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -242,6 +244,51 @@ func OpenCSAF(path string, products []string) (*VEX, error) {
 	}
 
 	return v, nil
+}
+
+// CanonicalHash returns a hash representing the state of impact statements
+// expressed in it. This hash should be constant as long as the impact
+// statements are not modified. Changes in extra information and metadata
+// will not alter the hash.
+func (vexDoc *VEX) CanonicalHash() (string, error) {
+	// Here's the algo:
+
+	// 1. Start with the document date. In unixtime to avoid format variance.
+	cString := fmt.Sprintf("%d", vexDoc.Timestamp.Unix())
+
+	// 2. Document version
+	cString += fmt.Sprintf(":%s", vexDoc.Version)
+
+	// 3. Sort the statements
+	stmts := vexDoc.Statements
+	SortStatements(stmts, *vexDoc.Timestamp)
+
+	// 4. Now add the data from each statement
+	//nolint:gocritic
+	for _, s := range stmts {
+		// 4a. Vulnerability
+		cString += fmt.Sprintf(":%s", s.Vulnerability)
+		// 4b. Status + Justification
+		cString += fmt.Sprintf(":%s:%s", s.Status, s.Justification)
+		// 4c. Statement time, in unixtime. If it exists, if not the doc's
+		if s.Timestamp != nil {
+			cString += fmt.Sprintf(":%d", s.Timestamp.Unix())
+		} else {
+			cString += fmt.Sprintf(":%d", vexDoc.Timestamp.Unix())
+		}
+		// 4d. Sorted products
+		prods := s.Products
+		sort.Strings(prods)
+		cString += fmt.Sprintf(":%s", strings.Join(prods, ":"))
+	}
+
+	// 5. Hash the string in sha256 and return
+	h := sha256.New()
+	if _, err := h.Write([]byte(cString)); err != nil {
+		return "", fmt.Errorf("hashing canonicalization string: %w", err)
+	}
+	fmt.Println(cString)
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
 func DateFromEnv() (*time.Time, error) {
