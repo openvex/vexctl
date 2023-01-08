@@ -65,7 +65,7 @@ func (o *createOptions) Validate(args []string) error {
 		if !vex.Justification(o.Justification).Valid() {
 			return fmt.Errorf("%s is not a valid VEX justification, valid justifications: %s", vex.StatusAffected, strings.Join(vex.Justifications(), ", "))
 		}
-	} else if o.Justification == "" {
+	} else if o.Justification != "" {
 		return fmt.Errorf("a %s impact status must not have a justification", status)
 	}
 
