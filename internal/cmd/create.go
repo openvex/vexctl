@@ -103,15 +103,15 @@ Examples:
 
 %s create --product="pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64" \
               --product="pkg:apk/wolfi/git@2.39.0-r1?arch=armv7" \
-              --vuln="CVE-2023-12345"
+              --vuln="CVE-2023-12345" \
               --status="fixed"
 
 # not_affected statements need a justification:
 
-%s create --product="pkg:apk/wolfi/trivy@0.36.1-r0?arch=x86_64"
-              --vuln="CVE-2023-12345"
-              --status="not_affected"
-              --justification="component_not_present"
+%s create --product="pkg:apk/wolfi/trivy@0.36.1-r0?arch=x86_64" \
+              --vuln="CVE-2023-12345" \
+              --status="not_affected" \
+              --justification="component_not_present" 
 
 `, appname, appname, appname, appname),
 		Use:               "create [flags] [product_id [vuln_id [status]]]",
@@ -158,7 +158,7 @@ Examples:
 
 	mergeCmd.PersistentFlags().StringVar(
 		&opts.DocumentID,
-		"docid",
+		"id",
 		"",
 		"ID for the new VEX document (default will be computed)",
 	)
@@ -177,18 +177,28 @@ Examples:
 		"author role to record in the new document",
 	)
 
-	mergeCmd.PersistentFlags().StringVar(
+	mergeCmd.PersistentFlags().StringVarP(
 		&opts.Vulnerability,
 		"vuln",
+		"v",
 		"",
 		"vulnerability to add to the statement (eg CVE-2023-12345)",
 	)
 
-	mergeCmd.PersistentFlags().StringSliceVar(
+	mergeCmd.PersistentFlags().StringSliceVarP(
 		&opts.Products,
 		"product",
+		"p",
 		[]string{},
 		"list of products to list in the statement, at least one is required",
+	)
+
+	mergeCmd.PersistentFlags().StringVarP(
+		&opts.Status,
+		"status",
+		"s",
+		"",
+		fmt.Sprintf("status of the product vs the vulnerability, see %s show statuses for list", appname),
 	)
 
 	mergeCmd.PersistentFlags().StringSliceVar(
@@ -203,7 +213,7 @@ Examples:
 		"justification",
 		"j",
 		"",
-		"list of subcomponents to add to the statement",
+		fmt.Sprintf("justification for not_affected status, see %s show justifications for list", appname),
 	)
 
 	mergeCmd.MarkFlagRequired("products") //nolint:errcheck
