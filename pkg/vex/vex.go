@@ -85,8 +85,10 @@ func New() VEX {
 	}
 	return VEX{
 		Metadata: Metadata{
-			Version:   "1",
-			Timestamp: &now,
+			Author:     DefaultAuthor,
+			AuthorRole: DefaultRole,
+			Version:    "1",
+			Timestamp:  &now,
 		},
 		Statements: []Statement{},
 	}
