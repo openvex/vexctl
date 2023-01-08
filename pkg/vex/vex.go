@@ -291,6 +291,24 @@ func (vexDoc *VEX) CanonicalHash() (string, error) {
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
+// GenerateCanonicalID generates an ID for the document. The ID will be
+// based on the canonicalization hash. This means that documents
+// with the same impact statements will always get the same ID.
+// Trying to generate the id of a doc with an existing ID will
+// not do anything.
+func (vexDoc *VEX) GenerateCanonicalID() (string, error) {
+	if vexDoc.ID != "" {
+		return vexDoc.ID, nil
+	}
+	cHash, err := vexDoc.CanonicalHash()
+	if err != nil {
+		return "", fmt.Errorf("getting canonical hash: %w", err)
+	}
+
+	vexDoc.ID = fmt.Sprintf("VEX-%s", cHash)
+	return "", nil
+}
+
 func DateFromEnv() (*time.Time, error) {
 	// Support envvar for reproducible vexing
 	d := os.Getenv("SOURCE_DATE_EPOCH")
