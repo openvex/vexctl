@@ -35,6 +35,9 @@ const (
 
 	// DefaultRole is the default value for a document's AuthorRole field.
 	DefaultRole = "Document Creator"
+
+	// Context is the URL of the json-ld context definition
+	Context = "https://openvex.dev/ns"
 )
 
 // The VEX type represents a VEX document and all of its contained information.
@@ -45,9 +48,12 @@ type VEX struct {
 
 // The Metadata type represents the metadata associated with a VEX document.
 type Metadata struct {
+	// Context is the URL pointing to the jsonld context definition
+	Context string `json:"@context"`
+
 	// ID is the identifying string for the VEX document. This should be unique per
 	// document.
-	ID string `json:"id"`
+	ID string `json:"@id"`
 
 	// Author is the identifier for the author of the VEX statement, ideally a common
 	// name, may be a URI. [author] is an individual or organization. [author]
