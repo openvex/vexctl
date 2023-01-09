@@ -52,7 +52,24 @@ func init() {
 	addFilter(rootCmd)
 	addAttest(rootCmd)
 	addMerge(rootCmd)
+	addCreate(rootCmd)
 	rootCmd.AddCommand(version.WithFont("doom"))
+}
+
+type vexDocOptions struct {
+	DocumentID string
+	Author     string
+	AuthorRole string
+}
+
+type vexStatementOptions struct {
+	Status          string
+	StatusNotes     string
+	Justification   string
+	ImpactStatement string
+	Vulnerability   string
+	Products        []string
+	Subcomponents   []string
 }
 
 func initLogging(*cobra.Command, []string) error {
