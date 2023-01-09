@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Chainguard, Inc.
+Copyright 2023 Chainguard, Inc.
 SPDX-License-Identifier: Apache-2.0
 */
 
@@ -84,9 +84,9 @@ from the command line. This is intended for simple use cases
 or to get a base document to get started.
 
 You can specify multiple products and customize the metadata of
-the document via the command line flags. vexctl will honor the
+the document via the command line flags. %s will honor the
 SOURCE_DATE_EPOCH environment variable and use that date for 
-the document (it can be formated in unix time or RFC3339).
+the document (it can be formatted in UNIX time or RFC3339).
 
 If you don't specify an ID for the document, one will be generated
 using its canonicalization hash.
@@ -98,7 +98,7 @@ Examples:
 
 %s create "pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64" CVE-2023-12345 fixed
 
-# You can specify more than one product. vexctl will read one from
+# You can specify more than one product. %s will read one from
 # the argument but you can control all parameters through command line
 # flags. Here's an example with two products in the same document:
 
@@ -114,7 +114,7 @@ Examples:
               --status="not_affected" \
               --justification="component_not_present" 
 
-`, appname, appname, appname, appname),
+`, appname, appname, appname, appname, appname, appname),
 		Use:               "create [flags] [product_id [vuln_id [status]]]",
 		Example:           fmt.Sprintf("%s create \"pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64\" CVE-2022-39260 fixed ", appname),
 		SilenceUsage:      false,
@@ -156,14 +156,14 @@ Examples:
 			if opts.outFilePath != "" {
 				f, err := os.Create(opts.outFilePath)
 				if err != nil {
-					return fmt.Errorf("opening vex file to write document: %w", err)
+					return fmt.Errorf("opening VEX file to write document: %w", err)
 				}
 				out = f
 				defer f.Close()
 			}
 
 			if err := newDoc.ToJSON(out); err != nil {
-				return fmt.Errorf("writing new vex document: %w", err)
+				return fmt.Errorf("writing new VEX document: %w", err)
 			}
 
 			if opts.outFilePath != "" {
@@ -215,7 +215,7 @@ Examples:
 		"status",
 		"s",
 		"",
-		fmt.Sprintf("status of the product vs the vulnerability, see %s show statuses for list", appname),
+		fmt.Sprintf("status of the product vs the vulnerability, see '%s show statuses' for list", appname),
 	)
 
 	createCmd.PersistentFlags().StringSliceVar(
@@ -230,7 +230,7 @@ Examples:
 		"justification",
 		"j",
 		"",
-		fmt.Sprintf("justification for not_affected status, see %s show justifications for list", appname),
+		fmt.Sprintf("justification for not_affected status, see '%s show justifications' for list", appname),
 	)
 
 	createCmd.PersistentFlags().StringVar(
