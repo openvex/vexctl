@@ -93,6 +93,7 @@ func New() VEX {
 	}
 	return VEX{
 		Metadata: Metadata{
+			Context:    Context,
 			Author:     DefaultAuthor,
 			AuthorRole: DefaultRole,
 			Version:    "1",
