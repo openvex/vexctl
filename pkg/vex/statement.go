@@ -93,6 +93,11 @@ func (stmt Statement) Validate() error { //nolint:gocritic // turning off for ru
 			return fmt.Errorf("impact statement should not be set when using status %q (was set to %q)", s, v)
 		}
 
+		// action statement is now required
+		if v := stmt.ActionStatement; v == "" {
+			return fmt.Errorf("action statement must be set when using status %q", s)
+		}
+
 	case StatusUnderInvestigation:
 		// irrelevant fields should not be set
 		if v := stmt.Justification; v != "" {
