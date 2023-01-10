@@ -68,6 +68,7 @@ type vexStatementOptions struct {
 	Justification   string
 	ImpactStatement string
 	Vulnerability   string
+	ActionStatement string
 	Products        []string
 	Subcomponents   []string
 }

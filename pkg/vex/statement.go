@@ -51,7 +51,7 @@ type Statement struct {
 	// that contains a description why the vulnerability cannot be exploited.
 	ImpactStatement string `json:"impact_statement,omitempty"`
 
-	// For "affected" status, a VEX statement MAY include an ActionStatement that
+	// For "affected" status, a VEX statement MUST include an ActionStatement that
 	// SHOULD describe actions to remediate or mitigate [vul_id].
 	ActionStatement          string     `json:"action_statement,omitempty"`
 	ActionStatementTimestamp *time.Time `json:"action_statement_timestamp,omitempty"`

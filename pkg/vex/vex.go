@@ -41,6 +41,9 @@ const (
 
 	// PublicNamespace is the public openvex namespace for common @ids
 	PublicNamespace = "https://openvex.dev/docs"
+
+	// NoActionStatementMsg is the action statement that informs that there is no action statement :/
+	NoActionStatementMsg = "No action statement provided"
 )
 
 // The VEX type represents a VEX document and all of its contained information.
