@@ -146,7 +146,7 @@ func TestGenerateCanonicalID(t *testing.T) {
 		{
 			// Normal generation
 			prepare:    func(v *VEX) {},
-			expectedID: "VEX-461bb1de8d85c7a6af96edf24d0e0672726d248500e63c5413f89db0c6710fa0",
+			expectedID: "https://openvex.dev/docs/public/vex-461bb1de8d85c7a6af96edf24d0e0672726d248500e63c5413f89db0c6710fa0",
 		},
 		{
 			// Existing IDs should not be changed

@@ -35,6 +35,12 @@ const (
 
 	// DefaultRole is the default value for a document's AuthorRole field.
 	DefaultRole = "Document Creator"
+
+	// Context is the URL of the json-ld context definition
+	Context = "https://openvex.dev/ns"
+
+	// PublicNamespace is the public openvex namespace for common @ids
+	PublicNamespace = "https://openvex.dev/docs"
 )
 
 // The VEX type represents a VEX document and all of its contained information.
@@ -45,9 +51,12 @@ type VEX struct {
 
 // The Metadata type represents the metadata associated with a VEX document.
 type Metadata struct {
+	// Context is the URL pointing to the jsonld context definition
+	Context string `json:"@context"`
+
 	// ID is the identifying string for the VEX document. This should be unique per
 	// document.
-	ID string `json:"id"`
+	ID string `json:"@id"`
 
 	// Author is the identifier for the author of the VEX statement, ideally a common
 	// name, may be a URI. [author] is an individual or organization. [author]
@@ -87,6 +96,7 @@ func New() VEX {
 	}
 	return VEX{
 		Metadata: Metadata{
+			Context:    Context,
 			Author:     DefaultAuthor,
 			AuthorRole: DefaultRole,
 			Version:    "1",
@@ -304,7 +314,8 @@ func (vexDoc *VEX) GenerateCanonicalID() (string, error) {
 		return "", fmt.Errorf("getting canonical hash: %w", err)
 	}
 
-	vexDoc.ID = fmt.Sprintf("VEX-%s", cHash)
+	// For common namespaced documents we namespace them into /public
+	vexDoc.ID = fmt.Sprintf("%s/public/vex-%s", PublicNamespace, cHash)
 	return vexDoc.ID, nil
 }
 
