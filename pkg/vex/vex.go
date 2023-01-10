@@ -38,6 +38,9 @@ const (
 
 	// Context is the URL of the json-ld context definition
 	Context = "https://openvex.dev/ns"
+
+	// PublicNamespace is the public openvex namespace for common @ids
+	PublicNamespace = "https://openvex.dev/docs"
 )
 
 // The VEX type represents a VEX document and all of its contained information.
@@ -311,7 +314,8 @@ func (vexDoc *VEX) GenerateCanonicalID() (string, error) {
 		return "", fmt.Errorf("getting canonical hash: %w", err)
 	}
 
-	vexDoc.ID = fmt.Sprintf("VEX-%s", cHash)
+	// For common namespaced documents we namespace them into /public
+	vexDoc.ID = fmt.Sprintf("%s/public/vex-%s", PublicNamespace, cHash)
 	return vexDoc.ID, nil
 }
 
