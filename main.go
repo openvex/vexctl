@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	"chainguard.dev/vex/internal/cmd"
+	"github.com/openvex/vexctl/internal/cmd"
 )
 
 func main() {

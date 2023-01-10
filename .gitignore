@@ -139,3 +139,4 @@ qemu-*-static
 rootfs.tar
 vexctl
 dist/**
+.go-version
