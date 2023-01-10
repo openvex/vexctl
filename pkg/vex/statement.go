@@ -69,11 +69,12 @@ func (stmt Statement) Validate() error { //nolint:gocritic // turning off for ru
 	case StatusNotAffected:
 		// require a justification
 		j := stmt.Justification
-		if j == "" {
-			return fmt.Errorf("justification missing, it's required when using status %q", s)
+		is := stmt.ImpactStatement
+		if j == "" && is == "" {
+			return fmt.Errorf("either justification or impact statement must be defined when using status %q", s)
 		}
 
-		if !j.Valid() {
+		if j != "" && !j.Valid() {
 			return fmt.Errorf("invalid justification value %q, must be one of [%s]", j, strings.Join(Justifications(), ", "))
 		}
 
