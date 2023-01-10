@@ -24,6 +24,9 @@ type createOptions struct {
 
 // Validates the options in context with arguments
 func (o *createOptions) Validate(args []string) error {
+	if o.Status != string(vex.StatusAffected) && o.ActionStatement == vex.NoActionStatementMsg {
+		o.ActionStatement = ""
+	}
 	if len(args) == 0 && len(o.Products) == 0 {
 		return errors.New("a required product id is required to generate a valid VEX statement")
 	}
@@ -41,33 +44,6 @@ func (o *createOptions) Validate(args []string) error {
 	}
 	if len(args) >= 3 && o.Status != "" && args[2] != o.Status {
 		return errors.New("status can only be specified once")
-	}
-
-	statusString := o.Status
-	if statusString == "" {
-		if len(args) < 3 {
-			return fmt.Errorf("a valid status is required to generate a valid VEX statement")
-		}
-		statusString = args[2]
-	}
-	status := vex.Status(statusString)
-	if !status.Valid() {
-		return fmt.Errorf(
-			"invalid VEX impact status '%s', valid status are: %s",
-			status, strings.Join(vex.Statuses(), ", "),
-		)
-	}
-
-	if status == vex.StatusNotAffected {
-		if o.Justification == "" {
-			return fmt.Errorf("an '%s' statement requires a valid justification: [%s]", vex.StatusAffected, strings.Join(vex.Justifications(), ", "))
-		}
-
-		if !vex.Justification(o.Justification).Valid() {
-			return fmt.Errorf("%s is not a valid VEX justification, valid justifications: %s", vex.StatusAffected, strings.Join(vex.Justifications(), ", "))
-		}
-	} else if o.Justification != "" {
-		return fmt.Errorf("a %s impact status must not have a justification", status)
 	}
 
 	return nil
@@ -145,7 +121,13 @@ Examples:
 				StatusNotes:     opts.StatusNotes,
 				Justification:   vex.Justification(opts.Justification),
 				ImpactStatement: opts.ImpactStatement,
+				ActionStatement: opts.ActionStatement,
 			}
+
+			if err := statement.Validate(); err != nil {
+				return fmt.Errorf("invalid statement: %w", err)
+			}
+
 			newDoc.Statements = append(newDoc.Statements, statement)
 			if _, err := newDoc.GenerateCanonicalID(); err != nil {
 				return fmt.Errorf("generating document id: %w", err)
@@ -231,6 +213,14 @@ Examples:
 		"j",
 		"",
 		fmt.Sprintf("justification for not_affected status, see '%s show justifications' for list", appname),
+	)
+
+	createCmd.PersistentFlags().StringVarP(
+		&opts.ActionStatement,
+		"action-statement",
+		"a",
+		vex.NoActionStatementMsg,
+		"action statement for affected status",
 	)
 
 	createCmd.PersistentFlags().StringVar(

@@ -51,7 +51,7 @@ type Statement struct {
 	// that contains a description why the vulnerability cannot be exploited.
 	ImpactStatement string `json:"impact_statement,omitempty"`
 
-	// For "affected" status, a VEX statement MAY include an ActionStatement that
+	// For "affected" status, a VEX statement MUST include an ActionStatement that
 	// SHOULD describe actions to remediate or mitigate [vul_id].
 	ActionStatement          string     `json:"action_statement,omitempty"`
 	ActionStatementTimestamp *time.Time `json:"action_statement_timestamp,omitempty"`
@@ -69,11 +69,12 @@ func (stmt Statement) Validate() error { //nolint:gocritic // turning off for ru
 	case StatusNotAffected:
 		// require a justification
 		j := stmt.Justification
-		if j == "" {
-			return fmt.Errorf("justification missing, it's required when using status %q", s)
+		is := stmt.ImpactStatement
+		if j == "" && is == "" {
+			return fmt.Errorf("either justification or impact statement must be defined when using status %q", s)
 		}
 
-		if !j.Valid() {
+		if j != "" && !j.Valid() {
 			return fmt.Errorf("invalid justification value %q, must be one of [%s]", j, strings.Join(Justifications(), ", "))
 		}
 
@@ -90,6 +91,11 @@ func (stmt Statement) Validate() error { //nolint:gocritic // turning off for ru
 
 		if v := stmt.ImpactStatement; v != "" {
 			return fmt.Errorf("impact statement should not be set when using status %q (was set to %q)", s, v)
+		}
+
+		// action statement is now required
+		if v := stmt.ActionStatement; v == "" {
+			return fmt.Errorf("action statement must be set when using status %q", s)
 		}
 
 	case StatusUnderInvestigation:
