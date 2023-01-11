@@ -12,8 +12,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"chainguard.dev/vex/pkg/ctl"
-	"chainguard.dev/vex/pkg/vex"
+	"github.com/openvex/vex/pkg/vex"
+
+	"github.com/openvex/vexctl/pkg/ctl"
 )
 
 type mergeOptions struct {

@@ -13,7 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"chainguard.dev/vex/pkg/vex"
+	"github.com/openvex/vex/pkg/vex"
 )
 
 type createOptions struct {

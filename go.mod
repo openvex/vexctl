@@ -3,8 +3,8 @@ module github.com/openvex/vexctl
 go 1.19
 
 require (
-	chainguard.dev/vex v0.1.0
 	github.com/google/go-containerregistry v0.12.1
+	github.com/openvex/vex v0.1.1-0.20230110080744-b295df0b0ef1
 	github.com/owenrumney/go-sarif v1.1.1
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0
 	github.com/sigstore/cosign v1.13.1

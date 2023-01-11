@@ -30,9 +30,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/release-utils/util"
 
-	"chainguard.dev/vex/pkg/attestation"
-	"chainguard.dev/vex/pkg/sarif"
-	"chainguard.dev/vex/pkg/vex"
+	"github.com/openvex/vex/pkg/attestation"
+	"github.com/openvex/vex/pkg/sarif"
+	"github.com/openvex/vex/pkg/vex"
 )
 
 const IntotoPayloadType = "application/vnd.in-toto+json"
