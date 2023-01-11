@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 
-	"chainguard.dev/vex/pkg/ctl"
+	"github.com/openvex/vexctl/pkg/ctl"
 	"github.com/spf13/cobra"
 )
 

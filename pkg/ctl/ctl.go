@@ -9,9 +9,9 @@ import (
 	"context"
 	"fmt"
 
-	"chainguard.dev/vex/pkg/attestation"
-	"chainguard.dev/vex/pkg/sarif"
-	"chainguard.dev/vex/pkg/vex"
+	"github.com/openvex/vex/pkg/attestation"
+	"github.com/openvex/vex/pkg/sarif"
+	"github.com/openvex/vex/pkg/vex"
 )
 
 type VexCtl struct {
