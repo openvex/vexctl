@@ -9,9 +9,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/openvex/vex/pkg/attestation"
 	"github.com/openvex/vex/pkg/sarif"
 	"github.com/openvex/vex/pkg/vex"
+
+	"github.com/openvex/vexctl/pkg/attestation"
 )
 
 type VexCtl struct {
@@ -71,18 +72,18 @@ func (vexctl *VexCtl) Attest(vexDataPath string, imageRefs []string) (*attestati
 		return nil, fmt.Errorf("adding image references to attestation")
 	}
 
+	// Sign the attestation
+	if vexctl.Options.Sign {
+		if err := att.Sign(); err != nil {
+			return att, fmt.Errorf("signing attestation: %w", err)
+		}
+	}
+
 	return att, nil
 }
 
 // Attach attaches an attestation to a list of images
 func (vexctl *VexCtl) Attach(ctx context.Context, att *attestation.Attestation, imageRefs []string) (err error) {
-	// Sign the attestation
-	if vexctl.Options.Sign {
-		if err := att.Sign(); err != nil {
-			return fmt.Errorf("signing attestation: %w", err)
-		}
-	}
-
 	for _, ref := range imageRefs {
 		if err := vexctl.impl.Attach(ctx, att, ref); err != nil {
 			return fmt.Errorf("attaching attestation: %w", err)
