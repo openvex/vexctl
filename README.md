@@ -28,14 +28,14 @@ The easiest way to create a VEX document is using the `vexctl create` command:
 
 ```
 vex ctl create --product="pkg:apk/wolfi/git@2.38.1-r0?arch=x86_64" \
-               --vuln="CVE-2023-12345" \
+               --vuln="CVE-2014-123456" \
                --status="not_affected" \
                --justification="inline_mitigations_already_exist"
 ```
 
 
 The previous invocations creates a vex document with a single statment asserting
-that the WolfiOS package `git-2.38.1-r0` is not affected by CVE-2023-12345 because
+that the WolfiOS package `git-2.38.1-r0` is not affected by CVE-2014-123456 because
 it has already been mitigated in the distribution.
 
 This is the resulting document:
@@ -50,7 +50,7 @@ This is the resulting document:
   "version": "1",
   "statements": [
     {
-      "vulnerability": "CVE-2023-12345",
+      "vulnerability": "CVE-2014-123456",
       "products": [
         "pkg:apk/wolfi/trivy@0.36.1-r0?arch=x86_64"
       ],
@@ -84,7 +84,7 @@ vexctl merge --product=pkg:apk/wolfi/bash@1.0.0 \
              pkg/ctl/testdata/document2.vex.json
 ```
 The resulting document combines the VEX statements that express data about
-`bash@1.0.0` into a single document that tells the whole story of how CVE-1234-5678
+`bash@1.0.0` into a single document that tells the whole story of how CVE-2014-123456
 was `under_investigation` and then `fixed` four hours later:
 
 ```json
@@ -97,7 +97,7 @@ was `under_investigation` and then `fixed` four hours later:
   "version": "1",
   "statements": [
     {
-      "vulnerability": "CVE-1234-5678",
+      "vulnerability": "CVE-2014-123456",
       "timestamp": "2022-12-22T16:36:43-05:00",
       "products": [
         "pkg:apk/wolfi/bash@1.0.0"
@@ -105,7 +105,7 @@ was `under_investigation` and then `fixed` four hours later:
       "status": "under_investigation"
     },
     {
-      "vulnerability": "CVE-1234-5678",
+      "vulnerability": "CVE-2014-123456",
       "timestamp": "2022-12-22T20:56:05-05:00",
       "products": [
         "pkg:apk/wolfi/bash@1.0.0"
@@ -169,7 +169,7 @@ Assessing impact is process that takes time. VEX is designed to
 communicate with users as time progresses. An example timeline may look like
 this:
 
-1. A project becomes aware of `CVE-2022-12345`, associated with one of its components.
+1. A project becomes aware of `CVE-2014-123456`, associated with one of its components.
 2. Developers issue a VEX data file with a status of `under_investigation` to
 inform their users they are aware of the CVE but are checking what impact it has.
 3. After investigation, the developers determine the CVE has no impact
@@ -181,7 +181,7 @@ the `vulnerable_code_not_in_execute_path` justification.
 known impacts statuses the order they were found, effectively computing the
 `not_affected` status.
 
-If a sarif report is VEX'ed with `vexctl` any entries alerting of CVE-2022-12345
+If a sarif report is VEX'ed with `vexctl` any entries alerting of CVE-2014-123456
 will be filtered out.
 
 ## Build vexctl
