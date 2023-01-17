@@ -9,9 +9,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/openvex/vex/pkg/attestation"
 	"github.com/openvex/vex/pkg/sarif"
 	"github.com/openvex/vex/pkg/vex"
+
+	"github.com/openvex/vexctl/pkg/attestation"
 )
 
 type VexCtl struct {
