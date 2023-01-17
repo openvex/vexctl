@@ -82,16 +82,18 @@ added to the attestation as subjects
 		},
 	}
 
-	generateCmd.PersistentFlags().BoolVar(
+	generateCmd.PersistentFlags().BoolVarP(
 		&opts.attach,
 		"attach",
+		"a",
 		false,
 		"attach the generated attestation to an image",
 	)
 
-	generateCmd.PersistentFlags().BoolVar(
+	generateCmd.PersistentFlags().BoolVarP(
 		&opts.sign,
 		"sign",
+		"s",
 		false,
 		"sign the attestation with sigstore",
 	)
