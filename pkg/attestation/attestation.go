@@ -8,7 +8,9 @@ package attestation
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -24,6 +26,7 @@ import (
 type Attestation struct {
 	signedData []byte `json:"-"`
 	ovattest.Attestation
+	Signed bool `json:"-"`
 }
 
 func New() *Attestation {
@@ -102,5 +105,21 @@ func (att *Attestation) AddImageSubjects(imageRefs []string) error {
 		return fmt.Errorf("adding image subjects to attestation: %w", err)
 	}
 
+	return nil
+}
+
+// ToJSON intercepts the openves to json call and if the attestation is signed
+// writes the signed data to io.Writer w instead of the original attestation.
+func (att *Attestation) ToJSON(w io.Writer) error {
+	if !att.Signed {
+		return att.Attestation.ToJSON(w)
+	}
+	if len(att.signedData) == 0 {
+		return errors.New("consistency error: attestation is signed but data is empty")
+	}
+
+	if _, err := w.Write(att.signedData); err != nil {
+		return fmt.Errorf("writing signed attestation: %w", err)
+	}
 	return nil
 }
