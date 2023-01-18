@@ -14,8 +14,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/openvex/vex/pkg/sarif"
-	"github.com/openvex/vex/pkg/vex"
+	"github.com/openvex/go-vex/pkg/sarif"
+	"github.com/openvex/go-vex/pkg/vex"
 
 	"github.com/openvex/vexctl/pkg/ctl"
 )

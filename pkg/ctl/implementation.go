@@ -30,8 +30,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/release-utils/util"
 
-	"github.com/openvex/vex/pkg/sarif"
-	"github.com/openvex/vex/pkg/vex"
+	"github.com/openvex/go-vex/pkg/sarif"
+	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/openvex/vexctl/pkg/attestation"
 )
 

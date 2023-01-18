@@ -12,7 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/openvex/vex/pkg/vex"
+	"github.com/openvex/go-vex/pkg/vex"
 
 	"github.com/openvex/vexctl/pkg/ctl"
 )
@@ -26,7 +26,7 @@ func addMerge(parentCmd *cobra.Command) {
 	mergeCmd := &cobra.Command{
 		Short: fmt.Sprintf("%s merge: merges two or more VEX documents into one", appname),
 		Long: fmt.Sprintf(`%s merge: merge one or more documents into one
-
+	
 When composing VEX data out of multiple sources it may be necessary to mix
 all statements into a single doc. The merge subcommand mixes the statements
 from one or more vex documents into a single, new one.

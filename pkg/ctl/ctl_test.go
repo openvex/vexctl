@@ -11,8 +11,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/openvex/vex/pkg/sarif"
-	"github.com/openvex/vex/pkg/vex"
+	"github.com/openvex/go-vex/pkg/sarif"
+	"github.com/openvex/go-vex/pkg/vex"
 )
 
 func TestVexReport(t *testing.T) {
