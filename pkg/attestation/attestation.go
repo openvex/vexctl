@@ -16,7 +16,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
-	ovattest "github.com/openvex/vex/pkg/attestation"
+	ovattest "github.com/openvex/go-vex/pkg/attestation"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
