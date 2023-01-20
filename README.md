@@ -3,9 +3,9 @@
 `vexctl` is a tool to create, apply and attest VEX (Vulnerability Exploitability
 eXchange) data. Its purpose is to help with the creation and management of
 VEX documents that allow "turning off" security scanner alerts of vulnerabilities
-known  not to affect a product.
+known not to affect a product.
 
-VEX can be though as a "negative security advisory". Using VEX, software authors
+VEX can be thought of as a "negative security advisory". Using VEX, software authors
 can communicate to their users that a vulnerable component has no security
 implications for their product.
 
@@ -27,7 +27,7 @@ signed attestation which can be attached to a container image.
 The easiest way to create a VEX document is using the `vexctl create` command:
 
 ```
-vex ctl create --product="pkg:apk/wolfi/git@2.38.1-r0?arch=x86_64" \
+vexctl create --product="pkg:apk/wolfi/git@2.38.1-r0?arch=x86_64" \
                --vuln="CVE-2014-123456" \
                --status="not_affected" \
                --justification="inline_mitigations_already_exist"
@@ -35,7 +35,7 @@ vex ctl create --product="pkg:apk/wolfi/git@2.38.1-r0?arch=x86_64" \
 
 
 The previous invocations creates a vex document with a single statment asserting
-that the WolfiOS package `git-2.38.1-r0` is not affected by CVE-2014-123456 because
+that the WolfiOS package `git-2.38.1-r0` is not affected by `CVE-2014-123456` because
 it has already been mitigated in the distribution.
 
 This is the resulting document:
@@ -66,7 +66,7 @@ vexctl can create VEX documents from three different sources:
 
 1. From the command line, as shown
 2. From a _golden file_ of predefined rules
-3. From merging other vex documents into a new one
+3. From merging other VEX documents into a new one
 
 The data is generated from a known rule set (the Golden Data) which is
 reused and reapplied to new releases of the same project.
@@ -84,7 +84,7 @@ vexctl merge --product=pkg:apk/wolfi/bash@1.0.0 \
              pkg/ctl/testdata/document2.vex.json
 ```
 The resulting document combines the VEX statements that express data about
-`bash@1.0.0` into a single document that tells the whole story of how CVE-2014-123456
+`bash@1.0.0` into a single document that tells the whole story of how `CVE-2014-123456`
 was `under_investigation` and then `fixed` four hours later:
 
 ```json
@@ -119,27 +119,24 @@ was `under_investigation` and then `fixed` four hours later:
 
 #### 2. Attesting Examples
 
-```
-# Attest and attach vex statements in mydata.vex.json to a container image:
+```shell
+# Attest and attach VEX statements in mydata.vex.json to a container image:
 vexctl attest --attach --sign mydata.vex.json cgr.dev/image@sha256:e4cf37d568d195b4..
-
 ```
 
 ### 3. VEXing a Results Set
 
 Using statements in a VEX document or from an attestation, `vexctl` will filter
-security scanner results to remove _vexed out_ entries.
+security scanner results to remove _VEX'ed out_ entries.
 
 #### Filtering Examples
 
-```
+```shell
 # From a VEX file:
 vexctl filter scan_results.sarif.json vex_data.csaf
 
-
 # From a stored VEX attestation:
 vexctl filter scan_results.sarif.json cgr.dev/image@sha256:e4cf37d568d195b4b5af4c36a...
-
 ```
 
 The output from both examples willl the same SARIF results data
@@ -181,19 +178,18 @@ the `vulnerable_code_not_in_execute_path` justification.
 known impacts statuses the order they were found, effectively computing the
 `not_affected` status.
 
-If a sarif report is VEX'ed with `vexctl` any entries alerting of CVE-2014-123456
+If a SARIF report is VEX'ed with `vexctl` any entries alerting of `CVE-2014-123456`
 will be filtered out.
 
 ## Build vexctl
 
-To build `vexctl`, clone this repository and run simply run make.
+To build `vexctl`, clone this repository and run `make`.
 
 ```console
-git clone git@github.com:openvex/vexctl
-cd vex
-make
-
-/vexctl version
+$ git clone https://github.com/openvex/vexctl.git
+$ cd vex
+$ make
+$ ./vexctl version
  _   _  _____ __   __ _____  _____  _
 | | | ||  ___|\ \ / //  __ \|_   _|| |
 | | | || |__   \ V / | /  \/  | |  | |
@@ -202,11 +198,12 @@ make
  \___/ \____/ \/   \/ \____/  \_/  \_____/
 vexctl: A tool for working with VEX data
 
-GitVersion:    v0.1.0-6-gf32c652-dirty
-GitCommit:     f32c65225aa93f03c6bd84af5dec9294c9b8ed3a
+GitVersion:    v0.1.0-21-g769ba3f-dirty
+GitCommit:     769ba3f0c638003b6c5e3c41ae88f4cdc63555ab
 GitTreeState:  dirty
-BuildDate:     2023-01-11T02:11:56Z
+BuildDate:     2023-01-18T00:19:24Z
 GoVersion:     go1.19.4
 Compiler:      gc
-Platform:      linux/amd64
+Platform:      darwin/arm64
+
 ```
