@@ -1,3 +1,6 @@
+# Copyright 2023 The OpenVEX Authors
+# SPDX-License-Identifier: Apache-2.0
+
 ---
 defaultBaseImage: cgr.dev/chainguard/static:latest
 

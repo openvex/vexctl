@@ -63,4 +63,4 @@ ko:
 .PHONY: build-sign-release-images
 build-sign-release-images: ko
 	GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	./release/ko-sign-release-images.sh
+	./scripts/ko-sign-release-images.sh
