@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Chainguard, Inc.
+Copyright 2022 The OpenVEX Authors
 SPDX-License-Identifier: Apache-2.0
 */
 
@@ -26,7 +26,7 @@ func addMerge(parentCmd *cobra.Command) {
 	mergeCmd := &cobra.Command{
 		Short: fmt.Sprintf("%s merge: merges two or more VEX documents into one", appname),
 		Long: fmt.Sprintf(`%s merge: merge one or more documents into one
-	
+
 When composing VEX data out of multiple sources it may be necessary to mix
 all statements into a single doc. The merge subcommand mixes the statements
 from one or more vex documents into a single, new one.
@@ -37,10 +37,10 @@ Examples:
 %s merge document1.vex.json document2.vex.json > new.vex.json
 
 # Merge two documents into one, but only one product
-%s merge --product="pkg:apk/wolfi/bash@1.0" document1.vex.json document2.vex.json 
+%s merge --product="pkg:apk/wolfi/bash@1.0" document1.vex.json document2.vex.json
 
 # Merge vulnerability data from two documents into one
-%s merge --vulnerability=CVE-2022-3294 document1.vex.json document2.vex.json 
+%s merge --vulnerability=CVE-2022-3294 document1.vex.json document2.vex.json
 
 `, appname, appname, appname, appname),
 		Use:               "merge",
