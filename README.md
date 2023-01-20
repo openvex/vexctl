@@ -1,28 +1,38 @@
 # vexctl: A tool to make VEX work
 
-`vexctl` is a tool to create, apply and attest VEX (Vulnerability Exploitability
+[![Build Status](https://github.com/openvex/vexctl/actions/workflows/ci-build-test.yaml/badge.svg?branch=main)](https://github.com/openvex/vexctl/actions/workflows/ci-build-test.yaml?query=branch%3Amain)
+[![Go Report Card](https://goreportcard.com/badge/github.com/openvex/vexctl)](https://goreportcard.com/report/github.com/openvex/vexctl)
+
+`vexctl` is a tool to create, apply, and attest VEX (Vulnerability Exploitability
 eXchange) data. Its purpose is to help with the creation and management of
 VEX documents that allow "turning off" security scanner alerts of vulnerabilities
 known not to affect a product.
 
 VEX can be thought of as a "negative security advisory". Using VEX, software authors
-can communicate to their users that a vulnerable component has no security
+can communicate to their users that an otherwise vulnerable component has no security
 implications for their product.
+
+## Installing
+
+If you have Go 1.16 or later installed, you can run the following to install `vexctl`:
+```console
+go install github.com/openvex/vexctl@latest
+```
 
 ## Operational Model
 
 To achieve its mission, `vexctl` has three main modes of operation:
 
-1. Create VEX documents
+1. Creating VEX documents
 2. Wrapping VEX documents in signed attestations
-2. Applying the VEX data to scanner results
+3. Applying the VEX data to scanner results
 
-### 1. Create VEX Statements
+### 1. Creating VEX Documents
 
 #### Creating New VEX Documents
 
-VEX data can be created to a file on disk or it can be captured in a
-signed attestation which can be attached to a container image.
+VEX data can be created to a file on disk, or it can be captured in a
+signed attestation that can be attached to a container image.
 
 The easiest way to create a VEX document is using the `vexctl create` command:
 
@@ -34,7 +44,7 @@ vexctl create --product="pkg:apk/wolfi/git@2.38.1-r0?arch=x86_64" \
 ```
 
 
-The previous invocations creates a vex document with a single statment asserting
+The previous invocations creates a VEX document with a single statement asserting
 that the WolfiOS package `git-2.38.1-r0` is not affected by `CVE-2014-123456` because
 it has already been mitigated in the distribution.
 
@@ -73,7 +83,7 @@ reused and reapplied to new releases of the same project.
 
 #### Merging Existing Documents
 
-When more than one stake holder is issuing VEX metadata about a piece of software,
+When more than one stakeholder is issuing VEX metadata about a piece of software,
 vexctl can merge the documents to get the most up-to-date impact assessment of
 a vulnerability. The following example can be run using the test documents found
 in this repository:
@@ -117,7 +127,7 @@ was `under_investigation` and then `fixed` four hours later:
 
 ```
 
-#### 2. Attesting Examples
+### 2. Attesting Examples
 
 ```shell
 # Attest and attach VEX statements in mydata.vex.json to a container image:
@@ -139,8 +149,8 @@ vexctl filter scan_results.sarif.json vex_data.csaf
 vexctl filter scan_results.sarif.json cgr.dev/image@sha256:e4cf37d568d195b4b5af4c36a...
 ```
 
-The output from both examples willl the same SARIF results data
-without those ulnerabilities stated as not explitable:
+The output from both examples will be the same: the SARIF result data, but
+without the vulnerabilities that were stated as not exploitable:
 
 ```json
 {
@@ -158,7 +168,7 @@ without those ulnerabilities stated as not explitable:
 ```
 
 We support results files in SARIF for now. We plan to add support for the
-propietary formats of the most popular scanners.
+proprietary formats of the most popular scanners.
 
 ### Multiple VEX Files
 
@@ -174,7 +184,7 @@ in their project because the vulnerable function in the component is never execu
 4. They issue a second VEX document with a status of `not_affected` and using
 the `vulnerable_code_not_in_execute_path` justification.
 
-`vexctl` will read all the documents in cronological order and "replay" the
+`vexctl` will read all the documents in chronological order and "replay" the
 known impacts statuses the order they were found, effectively computing the
 `not_affected` status.
 
