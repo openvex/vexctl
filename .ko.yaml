@@ -1,0 +1,21 @@
+# Copyright 2023 The OpenVEX Authors
+# SPDX-License-Identifier: Apache-2.0
+
+---
+defaultBaseImage: cgr.dev/chainguard/static:latest
+
+builds:
+  - id: vexctl
+    dir: .
+    main: .
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+      - --tags
+      - "{{ .Env.GIT_HASH }}"
+      - --tags
+      - "{{ .Env.GIT_VERSION }}"
+    ldflags:
+      - -extldflags "-static"
+      - "{{ .Env.LDFLAGS }}"

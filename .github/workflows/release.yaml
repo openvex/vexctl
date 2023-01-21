@@ -6,42 +6,89 @@ name: Release
 on:
   push:
     tags:
-    - 'v*'
+      - 'v*'
 
 jobs:
   release:
     runs-on: ubuntu-latest
 
     permissions:
-      id-token: write
-      contents: write
+      contents: write # needed to write releases
+      id-token: write # needed for keyless signing
+      packages: write # needed for pushing the images to ghcr.io
 
     env:
       GO111MODULE: on
       COSIGN_EXPERIMENTAL: "true"
 
     steps:
-    - name: Check out code onto GOPATH
-      uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.0.2
+      - name: Check out code onto GOPATH
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.0.2
 
-    - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.3.0
-      with:
-        go-version: 1.19
-        check-latest: true
+      - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.3.0
+        with:
+          go-version: 1.19
+          check-latest: true
 
-    - name: Install cosign
-      uses: sigstore/cosign-installer@9becc617647dfa20ae7b1151972e9b3a2c338a2b # v2
+      - name: Install cosign
+        uses: sigstore/cosign-installer@9becc617647dfa20ae7b1151972e9b3a2c338a2b # v2.8.1
 
-    - name: Install GoReleaser
-      uses: goreleaser/goreleaser-action@8f67e590f2d095516493f017008adc464e63adb1 # v3.1.0
-      with:
-        install-only: true
+      - name: Get TAG
+        id: get_tag
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-    - name: Get TAG
-      id: get_tag
-      run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      - name: Set LDFLAGS
+        id: ldflags
+        run: |
+            source ./release/ldflags.sh
+            goflags=$(ldflags)
+            echo "GO_FLAGS="${goflags}"" >> "$GITHUB_ENV"
 
-    - name: Run goreleaser
-      run: make release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run GoReleaser
+        id: run-goreleaser
+        uses: goreleaser/goreleaser-action@8f67e590f2d095516493f017008adc464e63adb1 # v4.1.0
+        with:
+          version: latest
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LDFLAGS: ${{ env.GO_FLAGS }}
+
+      - name: Generate subject
+        id: hash
+        env:
+          ARTIFACTS: "${{ steps.run-goreleaser.outputs.artifacts }}"
+        run: |
+          set -euo pipefail
+          checksum_file=$(echo "$ARTIFACTS" | jq -r '.[] | select (.type=="Checksum") | .path')
+          echo "hashes=$(cat $checksum_file | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+  provenance:
+    needs: [release]
+    permissions:
+      actions: read # To read the workflow path.
+      id-token: write # To sign the provenance.
+      contents: write # To add assets to a release.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.4.0
+    with:
+      base64-subjects: "${{ needs.release.outputs.hashes }}"
+      upload-assets: false # do not upload to a new release since goreleaser creates it
+
+  release-provenance:
+    needs: [provenance]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read # To read the workflow path.
+      contents: write # To add assets to a release.
+    steps:
+      - name: Download the provenance
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: ${{needs.provenance.outputs.provenance-name}}
+
+      - name: Release Provenance
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
+        id: release-provenance
+        with:
+          draft: true
+          files: ${{needs.provenance.outputs.provenance-name}}

@@ -27,6 +27,11 @@ LDFLAGS=-buildid= -X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION)
         -X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
         -X sigs.k8s.io/release-utils/version.gitTreeState=$(GIT_TREESTATE) \
         -X sigs.k8s.io/release-utils/version.buildDate=$(BUILD_DATE)
+
+
+KO_PREFIX ?= ghcr.io/openvex
+export KO_DOCKER_REPO=$(KO_PREFIX)
+
 ## Build
 .PHONY: vex
 vex: # build the binaries
@@ -46,3 +51,16 @@ release:
 .PHONY: snapshot
 snapshot:
 	LDFLAGS="$(LDFLAGS)" goreleaser release --rm-dist --snapshot --skip-sign --skip-publish --timeout 120m
+
+.PHONY: ko
+ko:
+	# vexctl
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=$(KO_PREFIX)/vexctl ko build --bare \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		--image-refs vexImagerefs github.com/openvex/vexctl
+
+.PHONY: build-sign-release-images
+build-sign-release-images: ko
+	GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	./scripts/ko-sign-release-images.sh

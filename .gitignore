@@ -140,3 +140,4 @@ rootfs.tar
 vexctl
 dist/**
 .go-version
+/vexImagerefs
