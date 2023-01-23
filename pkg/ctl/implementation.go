@@ -16,7 +16,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	gosarif "github.com/owenrumney/go-sarif/sarif"
@@ -306,23 +305,15 @@ func (impl *defaultVexCtlImplementation) Merge(
 		// Hash the sorted IDs list
 		docID = fmt.Sprintf("merged-vex-%x", h.Sum(nil))
 	}
-	now := time.Now()
-	newDoc := &vex.VEX{
-		Metadata: vex.Metadata{
-			ID:         docID, // TODO
-			Author:     mergeOpts.Author,
-			AuthorRole: mergeOpts.AuthorRole,
-			Timestamp:  &now,
-		},
-	}
 
-	t, err := vex.DateFromEnv()
-	if err != nil {
-		return nil, fmt.Errorf("reading date from env: %w", err)
-	}
+	newDoc := vex.New()
 
-	if t != nil {
-		newDoc.Metadata.Timestamp = t
+	newDoc.ID = docID
+	if author := mergeOpts.Author; author != "" {
+		newDoc.Author = author
+	}
+	if authorRole := mergeOpts.AuthorRole; authorRole != "" {
+		newDoc.AuthorRole = authorRole
 	}
 
 	ss := []vex.Statement{}
@@ -371,7 +362,7 @@ func (impl *defaultVexCtlImplementation) Merge(
 
 	newDoc.Statements = ss
 
-	return newDoc, nil
+	return &newDoc, nil
 }
 
 // LoadFiles loads multiple vex files from disk
