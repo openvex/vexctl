@@ -120,7 +120,7 @@ was `under_investigation` and then `fixed` four hours later:
       "products": [
         "pkg:apk/wolfi/bash@1.0.0"
       ],
-      "status": "affected"
+      "status": "fixed"
     }
   ]
 }

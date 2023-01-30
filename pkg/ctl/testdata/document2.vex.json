@@ -8,7 +8,7 @@
             "timestamp": "2022-12-22T20:56:05-05:00",
             "products": ["pkg:apk/wolfi/bash@1.0.0"],
             "vulnerability": "CVE-1234-5678",
-            "status": "affected"
+            "status": "fixed"
         }
     ]
 }
