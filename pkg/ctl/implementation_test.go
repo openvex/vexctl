@@ -7,7 +7,10 @@ package ctl
 import (
 	"testing"
 
+	intoto "github.com/in-toto/in-toto-golang/in_toto"
+
 	"github.com/openvex/go-vex/pkg/vex"
+	"github.com/openvex/vexctl/pkg/attestation"
 	"github.com/stretchr/testify/require"
 )
 
@@ -111,5 +114,54 @@ func TestListDocumentProducts(t *testing.T) {
 		prods, err := impl.ListDocumentProducts(doc)
 		require.NoError(t, err)
 		require.Equal(t, tc.expected, prods)
+	}
+}
+
+func TestVerifyImageSubjects(t *testing.T) {
+	impl := defaultVexCtlImplementation{}
+	att := attestation.New()
+	for _, tc := range []struct {
+		subjects []intoto.Subject
+		products []string
+		mustErr  bool
+	}{
+		{
+			// Literal match
+			[]intoto.Subject{
+				{Name: "ghcr.io/test/image:canary"},
+			},
+			[]string{"ghcr.io/test/image:canary"},
+			false,
+		},
+		{
+			// Tags are note translated
+			[]intoto.Subject{
+				{Name: "ghcr.io/test/image:canary"},
+			},
+			[]string{"ghcr.io/test/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99"},
+			true,
+		},
+		{
+			// purls need to be translated
+			[]intoto.Subject{
+				{Name: "ghcr.io/test/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99"},
+			},
+			[]string{"pkg:oci/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99?repository_url=ghcr.io/test"},
+			false,
+		},
+	} {
+		att.Subject = tc.subjects
+		doc := vex.New()
+		for _, p := range tc.products {
+			doc.Statements = append(
+				doc.Statements, vex.Statement{Products: []string{p}},
+			)
+		}
+		err := impl.VerifyImageSubjects(att, &doc)
+		if tc.mustErr {
+			require.Error(t, err)
+		} else {
+			require.NoError(t, err)
+		}
 	}
 }
