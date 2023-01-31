@@ -105,6 +105,10 @@ to user/test, even if the OpenVEX document has entries for other images:
 
 			vexctl := ctl.New()
 			vexctl.Options.Sign = opts.sign
+			// Attaching always means signing
+			if opts.attach {
+				vexctl.Options.Sign = true
+			}
 
 			attestation, err := vexctl.Attest(args[0], args[1:])
 			if err != nil {
@@ -130,7 +134,7 @@ to user/test, even if the OpenVEX document has entries for other images:
 		"attach",
 		"a",
 		false,
-		"attach the generated attestation to an image",
+		"attach the generated attestation to an image (implies --sign)",
 	)
 
 	generateCmd.PersistentFlags().BoolVarP(
