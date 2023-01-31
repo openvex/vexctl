@@ -1,7 +1,8 @@
 /*
-Copyright 2023 Chainguard, Inc.
+Copyright 2023 The OpenVEX Authors
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ctl
 
 import (
