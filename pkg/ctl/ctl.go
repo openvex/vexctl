@@ -16,6 +16,8 @@ import (
 	"github.com/openvex/vexctl/pkg/attestation"
 )
 
+const errNoImage = "some entries are not container images: %v"
+
 type VexCtl struct {
 	impl    Implementation
 	Options Options
@@ -60,7 +62,7 @@ func (vexctl *VexCtl) Apply(r *sarif.Report, vexDocs []*vex.VEX) (finalReport *s
 }
 
 // Generate an attestation from a VEX
-func (vexctl *VexCtl) Attest(vexDataPath string, subjects []string) (*attestation.Attestation, error) {
+func (vexctl *VexCtl) Attest(vexDataPath string, manSubjects []string) (*attestation.Attestation, error) {
 	doc, err := vexctl.impl.OpenVexData(vexctl.Options, []string{vexDataPath})
 	if err != nil {
 		return nil, fmt.Errorf("opening vex data: %w", err)
@@ -69,29 +71,38 @@ func (vexctl *VexCtl) Attest(vexDataPath string, subjects []string) (*attestatio
 	// Generate the attestation
 	att := attestation.New()
 	att.Predicate = *doc[0]
+	subjects := manSubjects
 
 	// If we did not get a specific list of subjects to attest, we default
 	// to the products of the VEX document.
-	if len(subjects) == 0 {
-		s, err := vexctl.impl.ListDocumentProducts(doc[0])
+	if len(manSubjects) == 0 {
+		subjects, err = vexctl.impl.ListDocumentProducts(doc[0])
 		if err != nil {
-			return nil, fmt.Errorf("reading document products: %w", err)
+			return nil, fmt.Errorf("listing document products")
 		}
-		subjects = s
 	}
 
 	imageSubjects, otherSubjects, err := vexctl.impl.NormalizeImageRefs(subjects)
 	if err != nil {
 		return nil, fmt.Errorf("normalizing VEX products to attest: %w", err)
 	}
+
 	if len(otherSubjects) != 0 {
-		logrus.Warnf(
-			"Some product entries are not container images, they will not be attested: %v", otherSubjects,
-		)
+		// if subject are manual, fail
+		if len(manSubjects) > 0 {
+			return nil, fmt.Errorf(errNoImage, otherSubjects)
+		}
+		// if from a doc, we ignore and skip
+		logrus.Warnf(errNoImage, otherSubjects)
 	}
 
 	if err := att.AddImageSubjects(imageSubjects); err != nil {
 		return nil, fmt.Errorf("adding image references to attestation: %w", err)
+	}
+
+	// Validate subjects came from the doc
+	if err := vexctl.impl.VerifyImageSubjects(att, doc[0]); err != nil {
+		return nil, fmt.Errorf("checking subjects: %w", err)
 	}
 
 	// Sign the attestation

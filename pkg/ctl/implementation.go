@@ -50,6 +50,7 @@ type Implementation interface {
 	LoadFiles(context.Context, []string) ([]*vex.VEX, error)
 	ListDocumentProducts(*vex.VEX) ([]string, error)
 	NormalizeImageRefs(subjects []string) ([]string, []string, error)
+	VerifyImageSubjects(*attestation.Attestation, *vex.VEX) error
 }
 
 type defaultVexCtlImplementation struct{}
@@ -457,4 +458,35 @@ func (impl *defaultVexCtlImplementation) NormalizeImageRefs(subjects []string) (
 		}
 	}
 	return imageRefs, otherRefs, nil
+}
+
+// VerifySubjectsPresent takes a list of references and ensures they are present
+// in the document which is being attested
+func (impl *defaultVexCtlImplementation) VerifyImageSubjects(
+	att *attestation.Attestation, doc *vex.VEX,
+) error {
+	products, err := impl.ListDocumentProducts(doc)
+	if err != nil {
+		return fmt.Errorf("listing products in the document: %w", err)
+	}
+
+	imageRefs, _, err := impl.NormalizeImageRefs(products)
+	if err != nil {
+		return fmt.Errorf("normalizing references: %s", err)
+	}
+
+	found := false
+	for _, sb := range att.Subject {
+		found = false
+		for _, r := range imageRefs {
+			if sb.Name == r {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("entry for %s not found in document %v", sb.Name, imageRefs)
+		}
+	}
+	return nil
 }
