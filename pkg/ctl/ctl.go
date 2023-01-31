@@ -11,6 +11,7 @@ import (
 
 	"github.com/openvex/go-vex/pkg/sarif"
 	"github.com/openvex/go-vex/pkg/vex"
+	"github.com/sirupsen/logrus"
 
 	"github.com/openvex/vexctl/pkg/attestation"
 )
@@ -59,7 +60,7 @@ func (vexctl *VexCtl) Apply(r *sarif.Report, vexDocs []*vex.VEX) (finalReport *s
 }
 
 // Generate an attestation from a VEX
-func (vexctl *VexCtl) Attest(vexDataPath string, imageRefs []string) (*attestation.Attestation, error) {
+func (vexctl *VexCtl) Attest(vexDataPath string, subjects []string) (*attestation.Attestation, error) {
 	doc, err := vexctl.impl.OpenVexData(vexctl.Options, []string{vexDataPath})
 	if err != nil {
 		return nil, fmt.Errorf("opening vex data: %w", err)
@@ -68,8 +69,29 @@ func (vexctl *VexCtl) Attest(vexDataPath string, imageRefs []string) (*attestati
 	// Generate the attestation
 	att := attestation.New()
 	att.Predicate = *doc[0]
-	if err := att.AddImageSubjects(imageRefs); err != nil {
-		return nil, fmt.Errorf("adding image references to attestation")
+
+	// If we did not get a specific list of subjects to attest, we default
+	// to the products of the VEX document.
+	if len(subjects) == 0 {
+		s, err := vexctl.impl.ListDocumentProducts(doc[0])
+		if err != nil {
+			return nil, fmt.Errorf("reading document products: %w", err)
+		}
+		subjects = s
+	}
+
+	imageSubjects, otherSubjects, err := vexctl.impl.NormalizeImageRefs(subjects)
+	if err != nil {
+		return nil, fmt.Errorf("normalizing VEX products to attest: %w", err)
+	}
+	if len(otherSubjects) != 0 {
+		logrus.Warnf(
+			"Some product entries are not container images, they will not be attested: %v", otherSubjects,
+		)
+	}
+
+	if err := att.AddImageSubjects(imageSubjects); err != nil {
+		return nil, fmt.Errorf("adding image references to attestation: %w", err)
 	}
 
 	// Sign the attestation
@@ -83,11 +105,9 @@ func (vexctl *VexCtl) Attest(vexDataPath string, imageRefs []string) (*attestati
 }
 
 // Attach attaches an attestation to a list of images
-func (vexctl *VexCtl) Attach(ctx context.Context, att *attestation.Attestation, imageRefs []string) (err error) {
-	for _, ref := range imageRefs {
-		if err := vexctl.impl.Attach(ctx, att, ref); err != nil {
-			return fmt.Errorf("attaching attestation: %w", err)
-		}
+func (vexctl *VexCtl) Attach(ctx context.Context, att *attestation.Attestation) (err error) {
+	if err := vexctl.impl.Attach(ctx, att); err != nil {
+		return fmt.Errorf("attaching attestation: %w", err)
 	}
 
 	return nil

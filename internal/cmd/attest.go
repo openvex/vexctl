@@ -48,12 +48,12 @@ added to the attestation as subjects
 
 
 `, appname, appname, appname, appname, appname, appname),
-		Use:           "attest",
-		SilenceUsage:  false,
-		SilenceErrors: false,
-		// PersistentPreRunE: initLogging,
+		Use:               "attest",
+		SilenceUsage:      false,
+		SilenceErrors:     false,
+		PersistentPreRunE: initLogging,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) < 2 {
+			if len(args) == 0 {
 				return errors.New("not enough arguments")
 			}
 			cmd.SilenceUsage = true
@@ -69,7 +69,7 @@ added to the attestation as subjects
 			}
 
 			if opts.attach {
-				if err := vexctl.Attach(ctx, attestation, args[1:]); err != nil {
+				if err := vexctl.Attach(ctx, attestation); err != nil {
 					return fmt.Errorf("attaching attestation: %w", err)
 				}
 			}
