@@ -19,6 +19,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	gosarif "github.com/owenrumney/go-sarif/sarif"
+	purl "github.com/package-url/packageurl-go"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -42,11 +43,13 @@ type Implementation interface {
 	OpenVexData(Options, []string) ([]*vex.VEX, error)
 	Sort(docs []*vex.VEX) []*vex.VEX
 	AttestationBytes(*attestation.Attestation) ([]byte, error)
-	Attach(context.Context, *attestation.Attestation, string) error
+	Attach(context.Context, *attestation.Attestation) error
 	SourceType(uri string) (string, error)
 	ReadImageAttestations(context.Context, Options, string) ([]*vex.VEX, error)
 	Merge(context.Context, *MergeOptions, []*vex.VEX) (*vex.VEX, error)
 	LoadFiles(context.Context, []string) ([]*vex.VEX, error)
+	ListDocumentProducts(*vex.VEX) ([]string, error)
+	NormalizeImageRefs(subjects []string) ([]string, []string, error)
 }
 
 type defaultVexCtlImplementation struct{}
@@ -133,13 +136,8 @@ func (impl *defaultVexCtlImplementation) AttestationBytes(att *attestation.Attes
 	return b.Bytes(), nil
 }
 
-func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attestation.Attestation, imageRef string) error {
+func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attestation.Attestation) error {
 	env := ssldsse.Envelope{}
-	regOpts := options.RegistryOptions{}
-	remoteOpts, err := regOpts.ClientOpts(ctx)
-	if err != nil {
-		return fmt.Errorf("getting OCI remote options: %w", err)
-	}
 
 	var b bytes.Buffer
 	if err := att.ToJSON(&b); err != nil {
@@ -160,42 +158,58 @@ func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attest
 			return fmt.Errorf("invalid payloadType %s on envelope. Expected %s", env.PayloadType, types.IntotoPayloadType)
 		}
 
-		ref, err := name.ParseReference(imageRef)
-		if err != nil {
-			return err
-		}
-		digest, err := ociremote.ResolveDigest(ref, remoteOpts...)
-		if err != nil {
-			return err
-		}
-		// Overwrite "ref" with a digest to avoid a race where we use a tag
-		// multiple times, and it potentially points to different things at
-		// each access.
-		ref = digest //nolint:ineffassign
-
-		opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
-		att, err := static.NewAttestation(payload, opts...)
-		if err != nil {
-			return err
-		}
-
-		se, err := ociremote.SignedEntity(digest, remoteOpts...)
-		if err != nil {
-			return err
-		}
-
-		newSE, err := mutate.AttachAttestationToEntity(se, att)
-		if err != nil {
-			return err
-		}
-
-		// Publish the signatures associated with this entity
-		err = ociremote.WriteAttestations(digest.Repository, newSE, remoteOpts...)
-		if err != nil {
-			return err
+		// At this point all sibjects in the attestation should be image refs
+		for _, s := range att.Subject {
+			if err := attachAttestation(ctx, payload, s.Name); err != nil {
+				return fmt.Errorf("attaching attestation to %s: %w", s.Name, err)
+			}
 		}
 	}
 
+	return nil
+}
+
+// attachAttestation is a utility function to do the actual attachment of
+// the signed attestation
+func attachAttestation(ctx context.Context, payload []byte, imageRef string) error {
+	regOpts := options.RegistryOptions{}
+	remoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return fmt.Errorf("getting OCI remote options: %w", err)
+	}
+
+	ref, err := name.ParseReference(imageRef)
+	if err != nil {
+		return err
+	}
+
+	digest, err := ociremote.ResolveDigest(ref, remoteOpts...)
+	if err != nil {
+		return fmt.Errorf("resolving entity: %w", err)
+	}
+
+	ref = digest //nolint:ineffassign
+
+	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
+	att, err := static.NewAttestation(payload, opts...)
+	if err != nil {
+		return err
+	}
+
+	se, err := ociremote.SignedEntity(digest, remoteOpts...)
+	if err != nil {
+		return fmt.Errorf("creating signed entity from image: %w", err)
+	}
+
+	newSE, err := mutate.AttachAttestationToEntity(se, att)
+	if err != nil {
+		return fmt.Errorf("attaching attestation: %w", err)
+	}
+
+	// Publish the signatures
+	if err := ociremote.WriteAttestations(digest.Repository, newSE, remoteOpts...); err != nil {
+		return fmt.Errorf("writing attestations to registry: %w", err)
+	}
 	return nil
 }
 
@@ -378,4 +392,69 @@ func (impl *defaultVexCtlImplementation) LoadFiles(
 		vexes[i] = doc
 	}
 	return vexes, nil
+}
+
+// ListDocumentProducts lists the products in a given document
+func (impl *defaultVexCtlImplementation) ListDocumentProducts(doc *vex.VEX) ([]string, error) {
+	if doc == nil {
+		return nil, errors.New("cannot read subjects, vex document is nil")
+	}
+	inv := map[string]struct{}{}
+	products := []string{}
+	for i := range doc.Statements {
+		for _, p := range doc.Statements[i].Products {
+			inv[p] = struct{}{}
+		}
+	}
+	for p := range inv {
+		products = append(products, p)
+	}
+	sort.Strings(products)
+	return products, nil
+}
+
+// NormalizeImageRefs returns a list of image references from a list of
+// VEX products. oci:purls are transformed into image references. All non
+// container image identifiers are untouched and returned in their own array.
+func (impl *defaultVexCtlImplementation) NormalizeImageRefs(subjects []string) (
+	imageRefs, otherRefs []string, err error,
+) {
+	imageRefs = []string{}
+	otherRefs = []string{}
+	for _, s := range subjects {
+		if strings.HasPrefix(s, "pkg:") && strings.HasPrefix(s, "pkg:oci/") {
+			// Deduct image purls to the reference as much as possible
+			p, err := purl.FromString(s)
+			if err != nil {
+				return nil, nil, fmt.Errorf("parsing purl subject: %s", err)
+			}
+
+			ref := ""
+			qs := p.Qualifiers.Map()
+			if r, ok := qs["repository_url"]; ok {
+				ref = fmt.Sprintf("%s/%s", strings.TrimSuffix(r, "/"), p.Name)
+			} else {
+				// digest or image
+				ref = p.Name
+			}
+
+			if p.Version != "" {
+				ref += "@" + p.Version
+			} else if tag, ok := qs["tag"]; ok {
+				ref += ":" + tag
+			}
+
+			logrus.Debugf("%s is a purl for %s", s, ref)
+			imageRefs = append(imageRefs, ref)
+
+			// All other purls go straight in, no hashes
+		} else if strings.HasPrefix(s, "pkg:") {
+			otherRefs = append(otherRefs, s)
+		} else {
+			// If not, it must be a reference. Adding these will fail if they are
+			// not images.
+			imageRefs = append(imageRefs, s)
+		}
+	}
+	return imageRefs, otherRefs, nil
 }
