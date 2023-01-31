@@ -7,6 +7,7 @@ package ctl
 import (
 	"testing"
 
+	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/stretchr/testify/require"
 )
 
@@ -82,5 +83,33 @@ func TestNormalizeImageRefs(t *testing.T) {
 		}
 		require.Equal(t, tc.expectedGood, good)
 		require.Equal(t, tc.expectedBad, bad)
+	}
+}
+
+func TestListDocumentProducts(t *testing.T) {
+	impl := defaultVexCtlImplementation{}
+	for _, tc := range []struct {
+		path     string
+		expected []string
+	}{
+		{
+			"testdata/images.vex.json",
+			[]string{
+				"nginx",
+				"pkg:oci/alpine@sha256%3Af271e74b17ced29b915d351685fd4644785c6d1559dd1f2d4189a5e851ef753a",
+				"pkg:oci/kube-apiserver?repository_url=registry.k8s.io&tag=v1.26.0",
+				"registry.k8s.io/kube-apiserver:v1.26.0",
+			},
+		},
+		{
+			"testdata/document1.vex.json",
+			[]string{"pkg:apk/wolfi/bash@1.0.0"},
+		},
+	} {
+		doc, err := vex.OpenJSON(tc.path)
+		require.NoError(t, err)
+		prods, err := impl.ListDocumentProducts(doc)
+		require.NoError(t, err)
+		require.Equal(t, tc.expected, prods)
 	}
 }
