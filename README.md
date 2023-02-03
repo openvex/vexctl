@@ -53,23 +53,22 @@ This is the resulting document:
 ```json
 {
   "@context": "https://openvex.dev/ns",
-  "@id": "https://openvex.dev/docs/public/vex-cfaef18d38537412a0307ec266bed56aa88fa58b7c1f2c6b8c9ef997028ba4bd",
+  "@id": "https://openvex.dev/docs/public/vex-23429cd0c468676c544579ddc118d76b5aa52aff8203c332d2c14dc2a415a551",
   "author": "Unknown Author",
   "role": "Document Creator",
-  "timestamp": "2023-01-10T20:24:50.498233798-06:00",
+  "timestamp": "2023-02-03T08:10:46.087206-07:00",
   "version": "1",
   "statements": [
     {
       "vulnerability": "CVE-2014-123456",
       "products": [
-        "pkg:apk/wolfi/trivy@0.36.1-r0?arch=x86_64"
+        "pkg:apk/wolfi/git@2.38.1-r0?arch=x86_64"
       ],
       "status": "not_affected",
-      "justification": "component_not_present"
+      "justification": "inline_mitigations_already_exist"
     }
   ]
 }
-
 ```
 
 vexctl can create VEX documents from three different sources:
@@ -99,15 +98,15 @@ was `under_investigation` and then `fixed` four hours later:
 
 ```json
 {
-  "@context": "https://openvex.dev/ns",
-  "@id": "https://openvex.dev/docs/public/merged-vex-67124ea942ef30e1f42f3f2bf405fbbc4f5a56e6e87684fc5cd957212fa3e025",
+  "@context": "",
+  "@id": "merged-vex-67124ea942ef30e1f42f3f2bf405fbbc4f5a56e6e87684fc5cd957212fa3e025",
   "author": "Unknown Author",
   "role": "Document Creator",
-  "timestamp": "2023-01-10T20:36:55.524170935-06:00",
-  "version": "1",
+  "timestamp": "2023-02-03T08:11:42.525456-07:00",
+  "version": "",
   "statements": [
     {
-      "vulnerability": "CVE-2014-123456",
+      "vulnerability": "CVE-1234-5678",
       "timestamp": "2022-12-22T16:36:43-05:00",
       "products": [
         "pkg:apk/wolfi/bash@1.0.0"
@@ -115,7 +114,7 @@ was `under_investigation` and then `fixed` four hours later:
       "status": "under_investigation"
     },
     {
-      "vulnerability": "CVE-2014-123456",
+      "vulnerability": "CVE-1234-5678",
       "timestamp": "2022-12-22T20:56:05-05:00",
       "products": [
         "pkg:apk/wolfi/bash@1.0.0"
@@ -124,7 +123,6 @@ was `under_investigation` and then `fixed` four hours later:
     }
   ]
 }
-
 ```
 
 ### 2. Attesting Examples
