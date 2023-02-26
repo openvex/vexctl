@@ -113,6 +113,13 @@ Examples:
 			}
 			newDoc := vex.New()
 
+			newDoc.Metadata.Author = opts.Author
+			newDoc.Metadata.AuthorRole = opts.AuthorRole
+
+			if opts.DocumentID != "" {
+				newDoc.Metadata.ID = opts.DocumentID
+			}
+
 			statement := vex.Statement{
 				Vulnerability:   opts.Vulnerability,
 				Products:        opts.Products,
@@ -198,6 +205,13 @@ Examples:
 		"s",
 		"",
 		fmt.Sprintf("status of the product vs the vulnerability, see '%s show statuses' for list", appname),
+	)
+
+	createCmd.PersistentFlags().StringVar(
+		&opts.StatusNotes,
+		"status-note",
+		"",
+		"statement on how status was determined",
 	)
 
 	createCmd.PersistentFlags().StringSliceVar(
