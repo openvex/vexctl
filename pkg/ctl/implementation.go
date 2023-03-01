@@ -21,12 +21,12 @@ import (
 	gosarif "github.com/owenrumney/go-sarif/sarif"
 	purl "github.com/package-url/packageurl-go"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/pkg/cosign"
-	"github.com/sigstore/cosign/pkg/oci/mutate"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
-	"github.com/sigstore/cosign/pkg/oci/static"
-	"github.com/sigstore/cosign/pkg/types"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
+	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	"github.com/sigstore/cosign/v2/pkg/oci/static"
+	"github.com/sigstore/cosign/v2/pkg/types"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/release-utils/util"
 
@@ -238,12 +238,12 @@ func (impl *defaultVexCtlImplementation) ReadImageAttestations(
 	if err != nil {
 		return nil, fmt.Errorf("parsing image reference: %w", err)
 	}
-	regOpts := options.RegistryOptions{}
+	regOpts := &options.RegistryOptions{}
 	remoteOpts, err := regOpts.ClientOpts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting OCI remote options: %w", err)
 	}
-	payloads, err := cosign.FetchAttestationsForReference(ctx, ref, remoteOpts...)
+	payloads, err := cosign.FetchAttestationsForReference(ctx, ref, "", remoteOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("fetching attached attestation: %w", err)
 	}
