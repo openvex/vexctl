@@ -2,7 +2,7 @@ project_name: vex
 
 env:
   - GO111MODULE=on
-  - COSIGN_EXPERIMENTAL=true
+  - COSIGN_YES=true
 
 before:
   hooks:
