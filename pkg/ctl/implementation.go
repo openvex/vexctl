@@ -386,12 +386,13 @@ func (impl *defaultVexCtlImplementation) LoadFiles(
 ) ([]*vex.VEX, error) {
 	vexes := make([]*vex.VEX, len(filePaths))
 	for i, path := range filePaths {
-		doc, err := vex.Load(path)
+		doc, err := vex.Open(path)
 		if err != nil {
 			return nil, fmt.Errorf("error loading file: %w", err)
 		}
 		vexes[i] = doc
 	}
+
 	return vexes, nil
 }
 
