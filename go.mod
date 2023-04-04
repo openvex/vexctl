@@ -11,7 +11,7 @@ require (
 	github.com/sigstore/cosign/v2 v2.0.1-0.20230228132138-2f1ec646de33
 	github.com/sigstore/sigstore v1.6.0
 	github.com/sirupsen/logrus v1.9.0
-	github.com/spf13/cobra v1.6.1
+	github.com/spf13/cobra v1.7.0
 	sigs.k8s.io/release-utils v0.7.3
 )
 
