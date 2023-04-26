@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/google/go-containerregistry v0.14.0
-	github.com/in-toto/in-toto-golang v0.7.1
+	github.com/in-toto/in-toto-golang v0.8.0
 	github.com/openvex/go-vex v0.2.0
 	github.com/owenrumney/go-sarif v1.1.1
 	github.com/secure-systems-lab/go-securesystemslib v0.5.0
