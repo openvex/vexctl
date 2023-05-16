@@ -231,7 +231,7 @@ func (impl *defaultVexCtlImplementation) SourceType(uri string) (string, error) 
 
 // DownloadAttestation
 func (impl *defaultVexCtlImplementation) ReadImageAttestations(
-	ctx context.Context, opts Options, refString string,
+	ctx context.Context, _ Options, refString string,
 ) (vexes []*vex.VEX, err error) {
 	// Parsae the image reference
 	ref, err := name.ParseReference(refString)
