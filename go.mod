@@ -3,7 +3,7 @@ module github.com/openvex/vexctl
 go 1.20
 
 require (
-	github.com/google/go-containerregistry v0.15.1
+	github.com/google/go-containerregistry v0.15.2
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/openvex/go-vex v0.2.0
 	github.com/owenrumney/go-sarif v1.1.1
