@@ -9,7 +9,7 @@ require (
 	github.com/owenrumney/go-sarif v1.1.1
 	github.com/secure-systems-lab/go-securesystemslib v0.6.0
 	github.com/sigstore/cosign/v2 v2.0.3-0.20230511235414-95ae338878ae
-	github.com/sigstore/sigstore v1.6.4
+	github.com/sigstore/sigstore v1.6.5
 	github.com/sirupsen/logrus v1.9.2
 	github.com/spf13/cobra v1.7.0
 	sigs.k8s.io/release-utils v0.7.4
@@ -67,7 +67,7 @@ require (
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
-	github.com/coreos/go-oidc/v3 v3.5.0 // indirect
+	github.com/coreos/go-oidc/v3 v3.6.0 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/digitorus/pkcs7 v0.0.0-20221212123742-001c36b64ec3 // indirect
@@ -144,6 +144,10 @@ require (
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/sigstore/fulcio v1.3.1 // indirect
 	github.com/sigstore/rekor v1.1.1 // indirect
+	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.6.5 // indirect
+	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.6.5 // indirect
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.6.5 // indirect
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.6.5 // indirect
 	github.com/sigstore/timestamp-authority v1.1.1 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/spf13/afero v1.9.3 // indirect
