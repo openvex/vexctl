@@ -74,18 +74,29 @@ func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, ve
 		newResults := []*gosarif.Result{}
 		logrus.Infof("Inspecting run #%d containing %d results", i, len(report.Runs[i].Results))
 		for _, res := range report.Runs[i].Results {
-			// Normalize the CVE IDs
-			m := cveRegexp.FindStringSubmatch(*res.RuleID)
-			if len(m) != 2 {
-				logrus.Errorf(
-					"Invalid rulename in sarif report, expected CVE identifier, got %s",
-					*res.RuleID,
-				)
+			id := ""
+			parts := strings.SplitN(strings.TrimSpace(*res.RuleID), "-", 2)
+			switch parts[0] {
+			case "CVE":
+				// Trim rule ID to CVE as Grype adds junk to the CVE ID
+				m := cveRegexp.FindStringSubmatch(*res.RuleID)
+				if len(m) == 2 {
+					id = m[1]
+				} else {
+					logrus.Errorf(
+						"Invalid rulename in sarif report, expected CVE identifier, got %s",
+						*res.RuleID,
+					)
+					newResults = append(newResults, res)
+					continue
+				}
+			case "RUSTSEC", "GHSA", "RHSA":
+				id = strings.TrimSpace(strings.TrimSpace(*res.RuleID))
+			default:
 				newResults = append(newResults, res)
 				continue
 			}
-			id := m[1]
-			// TODO: Trim rule ID to CVE as Grype adds junk to the CVE ID
+
 			statement := vexDoc.StatementFromID(id)
 			logrus.Infof("Checking %s", id)
 			if statement != nil {
