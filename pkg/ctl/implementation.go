@@ -68,11 +68,10 @@ func (impl *defaultVexCtlImplementation) SortDocuments(docs []*vex.VEX) []*vex.V
 func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, vexDoc *vex.VEX) (*sarif.Report, error) {
 	newReport := *report
 	logrus.Infof("VEX document contains %d statements", len(vexDoc.Statements))
-	logrus.Infof("+%v Runs: %d\n", report, len(report.Runs))
 	// Search for negative VEX statements, that is those that cancel a CVE
 	for i := range report.Runs {
 		newResults := []*gosarif.Result{}
-		logrus.Infof("Inspecting run #%d containing %d results", i, len(report.Runs[i].Results))
+		logrus.Infof("Inspecting SARIF run #%d containing %d results", i, len(report.Runs[i].Results))
 		for _, res := range report.Runs[i].Results {
 			id := ""
 			parts := strings.SplitN(strings.TrimSpace(*res.RuleID), "-", 2)
@@ -98,12 +97,10 @@ func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, ve
 			}
 
 			statement := vexDoc.StatementFromID(id)
-			logrus.Infof("Checking %s", id)
 			if statement != nil {
-				logrus.Infof("Statement is for %s and status is %s", statement.Vulnerability, statement.Status)
+				logrus.Infof(" >> found VEX statement for %s with status %q", statement.Vulnerability, statement.Status)
 				if statement.Status == vex.StatusNotAffected ||
 					statement.Status == vex.StatusFixed {
-					logrus.Infof("Found VEX Statement for %s: %s", id, statement.Status)
 					continue
 				}
 			}
