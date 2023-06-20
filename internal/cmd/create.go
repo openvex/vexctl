@@ -46,6 +46,10 @@ func (o *createOptions) Validate(args []string) error {
 		return errors.New("status can only be specified once")
 	}
 
+	if o.ImpactStatement != "" && o.Status != string(vex.StatusNotAffected) {
+		return fmt.Errorf("--impact-statement can be set only when status is \"not_affected\" (status was %q)", o.Status)
+	}
+
 	return nil
 }
 
@@ -97,9 +101,6 @@ Examples:
 		SilenceErrors:     false,
 		PersistentPreRunE: initLogging,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := opts.Validate(args); err != nil {
-				return err
-			}
 			// If we have arguments, add them
 			for i := range args {
 				switch i {
@@ -111,6 +112,11 @@ Examples:
 					opts.Status = args[i]
 				}
 			}
+
+			if err := opts.Validate(args); err != nil {
+				return err
+			}
+
 			newDoc := vex.New()
 
 			newDoc.Metadata.Author = opts.Author
@@ -242,6 +248,13 @@ Examples:
 		"file",
 		"",
 		"file to write the document (default is STDOUT)",
+	)
+
+	createCmd.PersistentFlags().StringVar(
+		&opts.ImpactStatement,
+		"impact-statement",
+		"",
+		"text explaining why a vulnerability cannot be exploited (only when status=not_affected)",
 	)
 
 	parentCmd.AddCommand(createCmd)
