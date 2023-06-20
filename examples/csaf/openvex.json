@@ -1,0 +1,17 @@
+{
+  "@context": "https://openvex.dev/ns",
+  "@id": "https://openvex.dev/docs/example/vex-9fb3463de1b57",
+  "author": "Wolfi J Inkinson",
+  "role": "Document Creator",
+  "timestamp": "2023-01-08T18:02:03.647787998-06:00",
+  "version": "1",
+  "statements": [
+    {
+      "vulnerability": "CVE-2014-123456",
+      "products": [
+        "pkg:generic/component2@2.39.0-r1"
+      ],
+      "status": "fixed"
+    }
+  ]
+}

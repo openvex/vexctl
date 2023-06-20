@@ -1,0 +1,95 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "SBOM-SPDX-15d23b0e-1397-45bf-b356-c26fa409feb6",
+  "spdxVersion": "SPDX-2.3",
+  "creationInfo": {
+    "created": "2023-03-01T07:03:32Z",
+    "creators": [
+      "Person: Adolfo García Veytia (puerco@chainguard.dev)"
+    ]
+  },
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://spdx.org/spdxdocs/puerco/tests/a62a0654-0646-49da-9fcb-6c6b8766657f",
+  "documentDescribes": [
+    "SPDXRef-Package-image"
+  ],
+  "files": [],
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-image",
+      "name": "image",
+      "versionInfo": "v1.0.0",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "CONTAINER",
+      "licenseConcluded": "Apache-2.0",
+      "downloadLocation": "NONE",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "603a6c7216a53d02889d4da068703478dc570644f9f76b1a99f6683775f9abeb"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:oci/image@sh256%3A2603a6c7216a53d02889d4da068703478dc570644f9f76b1a99f6683775f9abeb",
+          "referenceType": "purl"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-component1",
+      "name": "component1",
+      "versionInfo": "1.3.4",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "Apache-2.0",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e32cf64960f27d402cf0ef1c15fcef97425da8c1ac238ff868125c5e2df64f2f"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:generic/component1@1.3.4",
+          "referenceType": "purl"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-component2",
+      "name": "component2",
+      "versionInfo": "2.39.0-r1",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseDeclared": "Apache-2.0",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "4d59fac9a8aa85ca7fdd1d4ae629e2408b3f2903f0a2e148f56d902bb5d480b1"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:generic/component2@2.39.0-r1",
+          "referenceType": "purl"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-Package-image",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-component1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-image",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-component2"
+    }
+  ]
+}
