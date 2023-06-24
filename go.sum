@@ -662,8 +662,6 @@ github.com/opencontainers/image-spec v1.1.0-rc3 h1:fzg1mXZFj8YdPeNkRXMg+zb88BFV0
 github.com/opencontainers/image-spec v1.1.0-rc3/go.mod h1:X4pATf0uXsnn3g5aiGIsVnJBR4mxhKzfwmvK/B2NTm8=
 github.com/opentracing/opentracing-go v1.2.0 h1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=
 github.com/opentracing/opentracing-go v1.2.0/go.mod h1:GxEUsuufX4nBwe+T+Wl9TAgYrxe9dPLANfrWvHYVTgc=
-github.com/openvex/go-vex v0.2.0 h1:7Q6VzdpZSZzYUyXB1dio/9LCGHp1iL3JldC+hMsbFg0=
-github.com/openvex/go-vex v0.2.0/go.mod h1:jYmYbhQAO/0hquryXND/jMVDBcob8/KkVgzUEUAHsFI=
 github.com/openvex/go-vex v0.2.1-0.20230531025847-386386bf8ab9 h1:ilWy/S/hyHiZnf6AMRYY0ND8vX7c3PzShTKN/1caKmo=
 github.com/openvex/go-vex v0.2.1-0.20230531025847-386386bf8ab9/go.mod h1:0pEm6soF5H/q5ef3looeeq6AcNb9bvKuxCBEjxcHqFY=
 github.com/owenrumney/go-sarif v1.1.1 h1:QNObu6YX1igyFKhdzd7vgzmw7XsWN3/6NMGuDzBgXmE=
@@ -728,8 +726,8 @@ github.com/sigstore/fulcio v1.3.1 h1:0ntW9VbQbt2JytoSs8BOGB84A65eeyvGSavWteYp29Y
 github.com/sigstore/fulcio v1.3.1/go.mod h1:/XfqazOec45ulJZpyL9sq+OsVQ8g2UOVoNVi7abFgqU=
 github.com/sigstore/rekor v1.1.1 h1:JCeSss+qUHnCATmwAZh4zT9k0Frdyq0BjmRwewSfEy4=
 github.com/sigstore/rekor v1.1.1/go.mod h1:x/xK+HK08MiuJv+v4OxY/Oo3bhuz1DtJXNJrV7hrzvs=
-github.com/sigstore/sigstore v1.7.0 h1:0jLlzxX68LtirwSTWAwRPMKhulT0aWVLmFU5ofnbtYA=
-github.com/sigstore/sigstore v1.7.0/go.mod h1:0PmMzfJP2Y9+lugD0wer4e7TihR5tM7NcIs3bQNk5xg=
+github.com/sigstore/sigstore v1.7.1 h1:fCATemikcBK0cG4+NcM940MfoIgmioY1vC6E66hXxks=
+github.com/sigstore/sigstore v1.7.1/go.mod h1:0PmMzfJP2Y9+lugD0wer4e7TihR5tM7NcIs3bQNk5xg=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.6.5 h1:SXzp0/S2fBT3O45BKBxInJ5zLqPTqN/nJRG9ZU6ZS1o=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.6.5/go.mod h1:iJ1fhlOHajTppwDbFpSrrxvteZcbDt96yOkAQZ3AWdY=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.6.5 h1:Eq7FRpCmtWgqO0W8PTV4uEtoLfVOJfDuLYGEwCN1Cy8=
