@@ -221,7 +221,7 @@ Examples:
 	)
 
 	createCmd.PersistentFlags().StringSliceVar(
-		&opts.Products,
+		&opts.Subcomponents,
 		"subcomponents",
 		[]string{},
 		"list of subcomponents to add to the statement",
