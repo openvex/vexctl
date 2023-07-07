@@ -89,8 +89,8 @@ func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, ve
 					newResults = append(newResults, res)
 					continue
 				}
-			case "RUSTSEC", "GHSA", "RHSA":
-				id = strings.TrimSpace(strings.TrimSpace(*res.RuleID))
+			case "GHSA", "PRISMA", "RHSA", "RUSTSEC":
+				id = strings.TrimSpace(*res.RuleID)
 			default:
 				newResults = append(newResults, res)
 				continue
