@@ -68,6 +68,10 @@ func (impl *defaultVexCtlImplementation) SortDocuments(docs []*vex.VEX) []*vex.V
 func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, vexDoc *vex.VEX) (*sarif.Report, error) {
 	newReport := *report
 	logrus.Infof("VEX document contains %d statements", len(vexDoc.Statements))
+
+	sortedStatements := vexDoc.Statements
+	vex.SortStatements(sortedStatements, *vexDoc.Timestamp)
+
 	// Search for negative VEX statements, that is those that cancel a CVE
 	for i := range report.Runs {
 		newResults := []*gosarif.Result{}
@@ -96,7 +100,7 @@ func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, ve
 				continue
 			}
 
-			statement := vexDoc.StatementFromID(id)
+			statement := statementFromVulnerabilityID(&sortedStatements, id)
 			if statement != nil {
 				logrus.Infof(" >> found VEX statement for %s with status %q", statement.Vulnerability, statement.Status)
 				if statement.Status == vex.StatusNotAffected ||
@@ -109,6 +113,20 @@ func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, ve
 		newReport.Runs[i].Results = newResults
 	}
 	return &newReport, nil
+}
+
+// statementFromVulnerabilityID temp function to replace vex.StatementFromID which
+// is now deprecated. It returns the latest statement from a list that matches a
+// vulnerability ID without taking into account the statement's product.
+//
+// To be removed in an upcoming revision in favor of new methods.
+func statementFromVulnerabilityID(statements *[]vex.Statement, vulnID string) *vex.Statement {
+	for i := len(*statements) - 1; i >= 0; i-- {
+		if (*statements)[i].Vulnerability == vulnID {
+			return &(*statements)[i]
+		}
+	}
+	return nil
 }
 
 // OpenVexData returns a set of vex documents from the paths received
