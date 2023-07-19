@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/google/go-containerregistry v0.15.2
 	github.com/in-toto/in-toto-golang v0.9.0
-	github.com/openvex/go-vex v0.2.1-0.20230531025847-386386bf8ab9
+	github.com/openvex/go-vex v0.2.1
 	github.com/owenrumney/go-sarif v1.1.1
 	github.com/secure-systems-lab/go-securesystemslib v0.7.0
 	github.com/sigstore/cosign/v2 v2.1.1
