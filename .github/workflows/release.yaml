@@ -33,6 +33,10 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # v3.1.1
 
+      - uses: ko-build/setup-ko@v0.6
+        with:
+          version: v0.14.1
+
       - name: Get TAG
         id: get_tag
         run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
