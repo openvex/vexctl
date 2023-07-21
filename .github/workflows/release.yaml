@@ -19,7 +19,11 @@ jobs:
 
     env:
       GO111MODULE: on
-      COSIGN_EXPERIMENTAL: "true"
+      COSIGN_YES: "true"
+
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
+      tag_name: ${{ steps.tag.outputs.tag_name }}
 
     steps:
       - name: Check out code onto GOPATH
@@ -33,7 +37,7 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # v3.1.1
 
-      - uses: ko-build/setup-ko@v0.6
+      - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
         with:
           version: v0.14.1
 
@@ -48,12 +52,15 @@ jobs:
             goflags=$(ldflags)
             echo "GO_FLAGS="${goflags}"" >> "$GITHUB_ENV"
 
+      - name: Log into ghcr.io
+        run: echo ${{ secrets.GITHUB_TOKEN }} | ko login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
       - name: Run GoReleaser
         id: run-goreleaser
         uses: goreleaser/goreleaser-action@336e29918d653399e599bfca99fadc1d7ffbc9f7 # v4.3.0
         with:
           version: latest
-          args: release --rm-dist
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LDFLAGS: ${{ env.GO_FLAGS }}
@@ -67,32 +74,22 @@ jobs:
           checksum_file=$(echo "$ARTIFACTS" | jq -r '.[] | select (.type=="Checksum") | .path')
           echo "hashes=$(cat $checksum_file | base64 -w0)" >> "$GITHUB_OUTPUT"
 
+      - name: build images
+        run: make build-sign-release-images || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   provenance:
-    needs: [release]
+    needs:
+      - release
+
     permissions:
       actions: read # To read the workflow path.
       id-token: write # To sign the provenance.
       contents: write # To add assets to a release.
+
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.7.0
     with:
       base64-subjects: "${{ needs.release.outputs.hashes }}"
-      upload-assets: false # do not upload to a new release since goreleaser creates it
-
-  release-provenance:
-    needs: [provenance]
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read # To read the workflow path.
-      contents: write # To add assets to a release.
-    steps:
-      - name: Download the provenance
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
-        with:
-          name: ${{needs.provenance.outputs.provenance-name}}
-
-      - name: Release Provenance
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
-        id: release-provenance
-        with:
-          draft: true
-          files: ${{needs.provenance.outputs.provenance-name}}
+      upload-assets: true # upload to a new release
+      upload-tag-name: "${{ needs.release.outputs.tag_name }}"

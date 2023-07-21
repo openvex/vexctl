@@ -8,14 +8,13 @@ before:
   hooks:
     - go mod tidy
     - /bin/bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
-    - /bin/bash -c 'make build-sign-release-images'
 
 gomod:
   proxy: true
 
 builds:
   - id: binaries
-    binary: vex-{{ .Os }}-{{ .Arch }}
+    binary: vexctl-{{ .Os }}-{{ .Arch }}
     no_unique_dist_dir: true
     main: .
     flags:
@@ -74,5 +73,4 @@ snapshot:
   name_template: SNAPSHOT-{{ .ShortCommit }}
 
 release:
-  prerelease: allow
-  draft: true # allow for manual edits
+  prerelease: auto

@@ -60,6 +60,13 @@ ko:
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		--image-refs vexImagerefs github.com/openvex/vexctl
 
+ko-local:
+	# vexctl
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=ko.local ko build --bare \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		--image-refs vexImagerefs github.com/openvex/vexctl
+
 .PHONY: build-sign-release-images
 build-sign-release-images: ko
 	GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
