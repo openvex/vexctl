@@ -14,7 +14,7 @@ gomod:
 
 builds:
   - id: binaries
-    binary: vex-{{ .Os }}-{{ .Arch }}
+    binary: vexctl-{{ .Os }}-{{ .Arch }}
     no_unique_dist_dir: true
     main: .
     flags:
