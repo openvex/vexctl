@@ -1,0 +1,34 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-cbce60e4c921512c381e3234db5f9bd19704658a1b670e196d42a96f3dd80cd3",
+  "author": "The OpenVEX Project",
+  "timestamp": "2023-08-16T19:55:22.076684217-06:00",
+  "version": 1,
+  "statements": [
+    {
+      "timestamp": "2023-08-15T19:55:22.076684217-06:00",
+      "vulnerability": {
+        "name": "CVE-2023-27103",
+        "aliases": ["SNYK-DEBIAN12-LIBDE265-3361563"]
+      },
+      "products": [
+        { "@id": "pkg:oci/nginx@sha256%3A13d22ec63300e16014d4a42aed735207a8b33c223cff19627dd3042e5a10a3a0" }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "statement": "This is a sample OpenVEX file, it is not a real security assessment."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2007-5686",
+        "description": "Access Restriction Bypass vulnerability in shadow",
+        "aliases": ["SNYK-DEBIAN12-SHADOW-1559391"]
+      },
+      "products": [
+        { "@id": "pkg:oci/nginx@sha256%3A13d22ec63300e16014d4a42aed735207a8b33c223cff19627dd3042e5a10a3a0" }
+      ],
+      "status": "fixed",
+      "statement": "This is a sample OpenVEX file, it is not a real security assessment."
+    }
+  ]
+}

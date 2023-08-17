@@ -1,5 +1,6 @@
 {
-    "id": "my-vexdoc",
+    "@context": "https://openvex.dev/ns",
+    "@id": "my-vexdoc2",
 	"format": "text/vex+json",
 	"author": "John Doe",
 	"role": "vex issuer",	
