@@ -93,64 +93,50 @@ func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, ve
 					newResults = append(newResults, res)
 					continue
 				}
-			case "GHSA", "PRISMA", "RHSA", "RUSTSEC":
+			case "GHSA", "PRISMA", "RHSA", "RUSTSEC", "SNYK":
 				id = strings.TrimSpace(*res.RuleID)
 			default:
 				newResults = append(newResults, res)
 				continue
 			}
 
-			statement := statementFromVulnerabilityID(&sortedStatements, id)
-			if statement != nil {
-				logrus.Infof(" >> found VEX statement for %s with status %q", statement.Vulnerability, statement.Status)
-				if statement.Status == vex.StatusNotAffected ||
-					statement.Status == vex.StatusFixed {
-					continue
-				}
+			statements := vexDoc.StatementsByVulnerability(id)
+
+			// OpenVEX doc has no data for this vulnerability ID
+			if len(statements) == 0 {
+				newResults = append(newResults, res)
+				continue
 			}
-			newResults = append(newResults, res)
+
+			switch statements[0].Status {
+			case vex.StatusNotAffected, vex.StatusFixed:
+				logrus.Debugf(
+					" >> found VEX statement for %s with status %q",
+					statements[0].Vulnerability, statements[0].Status,
+				)
+			default:
+				newResults = append(newResults, res)
+			}
 		}
 		newReport.Runs[i].Results = newResults
 	}
 	return &newReport, nil
 }
 
-// statementFromVulnerabilityID temp function to replace vex.StatementFromID which
-// is now deprecated. It returns the latest statement from a list that matches a
-// vulnerability ID without taking into account the statement's product.
-//
-// To be removed in an upcoming revision in favor of new methods.
-func statementFromVulnerabilityID(statements *[]vex.Statement, vulnID string) *vex.Statement {
-	for i := len(*statements) - 1; i >= 0; i-- {
-		if (*statements)[i].Vulnerability == vulnID {
-			return &(*statements)[i]
-		}
-	}
-	return nil
-}
-
 // OpenVexData returns a set of vex documents from the paths received
-func (impl *defaultVexCtlImplementation) OpenVexData(opts Options, paths []string) ([]*vex.VEX, error) {
+func (impl *defaultVexCtlImplementation) OpenVexData(_ Options, paths []string) ([]*vex.VEX, error) {
 	vexes := []*vex.VEX{}
 	for _, path := range paths {
-		var v *vex.VEX
-		var err error
-		switch opts.Format {
-		case "vex", "json", "":
-			v, err = vex.OpenJSON(path)
-		case "yaml":
-			v, err = vex.OpenYAML(path)
-		case "csaf":
-			v, err = vex.OpenCSAF(path, opts.Products)
-		}
+		doc, err := vex.Open(path)
 		if err != nil {
-			return nil, fmt.Errorf("opening document: %w", err)
+			return nil, fmt.Errorf("opening VEX document")
 		}
-		vexes = append(vexes, v)
+		vexes = append(vexes, doc)
 	}
 	return vexes, nil
 }
 
+// Sort sorts a list of documents
 func (impl *defaultVexCtlImplementation) Sort(docs []*vex.VEX) []*vex.VEX {
 	return vex.SortDocuments(docs)
 }
@@ -359,6 +345,8 @@ func (impl *defaultVexCtlImplementation) Merge(
 
 	ss := []vex.Statement{}
 
+	// Create an inverse dict of products and vulnerabilities to filter
+	// these will only be used if ids to filter on are defined in the options.
 	iProds := map[string]struct{}{}
 	iVulns := map[string]struct{}{}
 	for _, id := range mergeOpts.Products {
@@ -369,20 +357,27 @@ func (impl *defaultVexCtlImplementation) Merge(
 	}
 
 	for _, doc := range docs {
-	LOOP_STATEMENTS:
 		for _, s := range doc.Statements { //nolint:gocritic // this IS supposed to copy
-			if len(iProds) > 0 {
-				for _, pid := range s.Products {
-					if _, ok := iProds[pid]; !ok {
-						continue LOOP_STATEMENTS
-					}
+			matchesProduct := false
+			for id := range iProds {
+				if s.MatchesProduct(id, "") {
+					matchesProduct = true
+					break
 				}
 			}
+			if len(iProds) > 0 && !matchesProduct {
+				continue
+			}
 
-			if len(iVulns) > 0 {
-				if _, ok := iProds[s.Vulnerability]; !ok {
-					continue LOOP_STATEMENTS
+			matchesVuln := false
+			for id := range iVulns {
+				if s.Vulnerability.Matches(id) {
+					matchesVuln = true
+					break
 				}
+			}
+			if len(iVulns) > 0 && !matchesVuln {
+				continue
 			}
 
 			// If statement does not have a timestamp, cascade
@@ -422,7 +417,7 @@ func (impl *defaultVexCtlImplementation) LoadFiles(
 	return vexes, nil
 }
 
-// ListDocumentProducts lists the products in a given document
+// ListDocumentProducts lists the main identifier of the products in a given document
 func (impl *defaultVexCtlImplementation) ListDocumentProducts(doc *vex.VEX) ([]string, error) {
 	if doc == nil {
 		return nil, errors.New("cannot read subjects, vex document is nil")
@@ -431,7 +426,23 @@ func (impl *defaultVexCtlImplementation) ListDocumentProducts(doc *vex.VEX) ([]s
 	products := []string{}
 	for i := range doc.Statements {
 		for _, p := range doc.Statements[i].Products {
-			inv[p] = struct{}{}
+			switch {
+			case p.ID != "":
+				inv[p.ID] = struct{}{}
+			case len(p.Identifiers) > 0:
+				if i, ok := p.Identifiers[vex.PURL]; ok {
+					inv[i] = struct{}{}
+					continue
+				}
+				for _, id := range p.Identifiers {
+					inv[id] = struct{}{}
+				}
+			case len(p.Hashes) > 0:
+				for _, hash := range p.Hashes {
+					inv[string(hash)] = struct{}{}
+					continue
+				}
+			}
 		}
 	}
 	for p := range inv {
