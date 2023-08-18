@@ -123,33 +123,7 @@ Examples:
 				newDoc.Metadata.ID = opts.DocumentID
 			}
 
-			statement := vex.Statement{
-				Vulnerability: vex.Vulnerability{
-					Name: vex.VulnerabilityID(opts.Vulnerability),
-				},
-				Products: []vex.Product{
-					{
-						Component: vex.Component{
-							ID:          opts.Product,
-							Hashes:      map[vex.Algorithm]vex.Hash{},
-							Identifiers: map[vex.IdentifierType]string{},
-						},
-						Subcomponents: []vex.Subcomponent{},
-					},
-				},
-				Status:          vex.Status(opts.Status),
-				StatusNotes:     opts.StatusNotes,
-				Justification:   vex.Justification(opts.Justification),
-				ImpactStatement: opts.ImpactStatement,
-				ActionStatement: opts.ActionStatement,
-			}
-
-			for _, sc := range opts.Subcomponents {
-				statement.Products[0].Subcomponents = append(
-					statement.Products[0].Subcomponents,
-					vex.Subcomponent{Component: vex.Component{ID: sc}},
-				)
-			}
+			statement := opts.ToStatement()
 
 			if err := statement.Validate(); err != nil {
 				return fmt.Errorf("invalid statement: %w", err)

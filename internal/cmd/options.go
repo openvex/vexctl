@@ -8,7 +8,9 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/spf13/cobra"
@@ -156,7 +158,7 @@ func (so *vexStatementOptions) AddFlags(cmd *cobra.Command) {
 		"action-statement",
 		"a",
 		vex.NoActionStatementMsg,
-		"action statement for affected status (only when status=affected)",
+		"action statement for \"affected\" status (only when status=affected)",
 	)
 
 	cmd.PersistentFlags().StringVar(
@@ -165,6 +167,55 @@ func (so *vexStatementOptions) AddFlags(cmd *cobra.Command) {
 		"",
 		"text explaining why a vulnerability cannot be exploited (only when status=not_affected)",
 	)
+}
+
+// ToStatement returns a new vex.Statement based on the configured options
+func (so *vexStatementOptions) ToStatement() vex.Statement {
+	t := time.Now()
+
+	s := vex.Statement{
+		Vulnerability: vex.Vulnerability{
+			Name: vex.VulnerabilityID(so.Vulnerability),
+		},
+		Timestamp:   &t,
+		LastUpdated: nil,
+		Products: []vex.Product{
+			{
+				Component: vex.Component{
+					ID: so.Product,
+				},
+				Subcomponents: []vex.Subcomponent{},
+			},
+		},
+		Status:                   vex.Status(so.Status),
+		StatusNotes:              so.StatusNotes,
+		Justification:            vex.Justification(so.Justification),
+		ImpactStatement:          so.ImpactStatement,
+		ActionStatement:          so.ActionStatement,
+		ActionStatementTimestamp: nil,
+	}
+
+	if so.ActionStatement != "" {
+		s.ActionStatementTimestamp = &t
+	}
+
+	for _, sc := range so.Subcomponents {
+		s.Products[0].Subcomponents = append(s.Products[0].Subcomponents, vex.Subcomponent{
+			Component: vex.Component{ID: sc},
+		})
+	}
+
+	// Honor the epoch date envvar
+	if os.Getenv("SOURCE_DATE_EPOCH") != "" {
+		d, err := vex.DateFromEnv()
+		if err == nil && d != nil {
+			s.Timestamp = d
+			if so.ActionStatement != "" {
+				s.ActionStatementTimestamp = d
+			}
+		}
+	}
+	return s
 }
 
 type productsListOption struct {
