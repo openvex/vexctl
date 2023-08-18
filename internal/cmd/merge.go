@@ -7,18 +7,33 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/openvex/go-vex/pkg/vex"
-
 	"github.com/openvex/vexctl/pkg/ctl"
 )
 
 type mergeOptions struct {
-	ctl.MergeOptions
+	vexDocOptions
+	productsListOption
+	vulnerabilityListOption
+}
+
+func (mo *mergeOptions) AddFlags(cmd *cobra.Command) {
+	mo.productsListOption.AddFlags(cmd)
+	mo.vulnerabilityListOption.AddFlags(cmd)
+	mo.vexDocOptions.AddFlags(cmd)
+}
+
+func (mo *mergeOptions) Validate() error {
+	return errors.Join(
+		mo.productsListOption.Validate(),
+		mo.vulnerabilityListOption.Validate(),
+		mo.vexDocOptions.Validate(),
+	)
 }
 
 func addMerge(parentCmd *cobra.Command) {
@@ -49,7 +64,16 @@ Examples:
 		PersistentPreRunE: initLogging,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			vexctl := ctl.New()
-			newVex, err := vexctl.MergeFiles(context.Background(), &opts.MergeOptions, args)
+
+			// TODO(puerco): Change this to vex merge options when we move
+			// the merge logic out of vexctl
+			newVex, err := vexctl.MergeFiles(context.Background(), &ctl.MergeOptions{
+				DocumentID:      opts.vexDocOptions.DocumentID,
+				Author:          opts.vexDocOptions.Author,
+				AuthorRole:      opts.vexDocOptions.AuthorRole,
+				Products:        opts.Products,
+				Vulnerabilities: opts.Vulnerabilities,
+			}, args)
 			if err != nil {
 				return fmt.Errorf("merging documents: %w", err)
 			}
@@ -60,40 +84,9 @@ Examples:
 		},
 	}
 
-	mergeCmd.PersistentFlags().StringVar(
-		&opts.DocumentID,
-		"docid",
-		"",
-		"ID for the new VEX document (default will be computed)",
-	)
-
-	mergeCmd.PersistentFlags().StringVar(
-		&opts.Author,
-		"author",
-		vex.DefaultAuthor,
-		"author to record in the new document",
-	)
-
-	mergeCmd.PersistentFlags().StringVar(
-		&opts.AuthorRole,
-		"author-role",
-		vex.DefaultRole,
-		"author role to record in the new document",
-	)
-
-	mergeCmd.PersistentFlags().StringSliceVar(
-		&opts.Vulnerabilities,
-		"vuln",
-		[]string{},
-		"list of vulnerabilities to extract",
-	)
-
-	mergeCmd.PersistentFlags().StringSliceVar(
-		&opts.Products,
-		"product",
-		[]string{},
-		"list of products to merge, all others will be ignored",
-	)
+	opts.productsListOption.AddFlags(mergeCmd)
+	opts.vulnerabilityListOption.AddFlags(mergeCmd)
+	opts.vexDocOptions.AddFlags(mergeCmd)
 
 	parentCmd.AddCommand(mergeCmd)
 }
