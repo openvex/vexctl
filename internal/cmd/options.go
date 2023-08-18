@@ -251,3 +251,20 @@ func (vl *vulnerabilityListOption) AddFlags(cmd *cobra.Command) {
 		"list of vulnerability identifiers",
 	)
 }
+
+type outFileOption struct {
+	outFilePath string
+}
+
+func (of *outFileOption) AddFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().StringVar(
+		&of.outFilePath,
+		"file",
+		"",
+		"file to write the document to (default is STDOUT)",
+	)
+}
+
+func (of *outFileOption) Validate() error {
+	return nil
+}
