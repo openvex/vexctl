@@ -1,6 +1,6 @@
 {
-    "id": "my-vexdoc",
-	"format": "text/vex+json",
+    "@context": "https://openvex.dev/ns",
+    "@id": "https://openvex.dev/docs/public/vex-c387e5e30d92b7a54412468ebc3af98805b5d8a8e60e9b1cabda755ff6a6ae57",
 	"author": "John Doe",
 	"role": "vex issuer",	
 	"statements": [

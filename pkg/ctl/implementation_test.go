@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package ctl
 
 import (
+	"context"
 	"testing"
 
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
@@ -106,11 +107,15 @@ func TestListDocumentProducts(t *testing.T) {
 			},
 		},
 		{
-			"testdata/document1.vex.json",
+			"testdata/v001-1.vex.json",
+			[]string{"pkg:apk/wolfi/bash@1.0.0"},
+		},
+		{
+			"testdata/v020-1.vex.json",
 			[]string{"pkg:apk/wolfi/bash@1.0.0"},
 		},
 	} {
-		doc, err := vex.OpenJSON(tc.path)
+		doc, err := vex.Open(tc.path)
 		require.NoError(t, err)
 		prods, err := impl.ListDocumentProducts(doc)
 		require.NoError(t, err)
@@ -155,7 +160,18 @@ func TestVerifyImageSubjects(t *testing.T) {
 		doc := vex.New()
 		for _, p := range tc.products {
 			doc.Statements = append(
-				doc.Statements, vex.Statement{Products: []string{p}},
+				doc.Statements, vex.Statement{
+					Products: []vex.Product{
+						{
+							Component: vex.Component{
+								ID:          p,
+								Hashes:      map[vex.Algorithm]vex.Hash{},
+								Identifiers: map[vex.IdentifierType]string{},
+							},
+							Subcomponents: []vex.Subcomponent{},
+						},
+					},
+				},
 			)
 		}
 		err := impl.VerifyImageSubjects(att, &doc)
@@ -164,5 +180,92 @@ func TestVerifyImageSubjects(t *testing.T) {
 		} else {
 			require.NoError(t, err)
 		}
+	}
+}
+
+func TestMerge(t *testing.T) {
+	ctx := context.Background()
+	doc1, err := vex.Open("testdata/v001-1.vex.json")
+	require.NoError(t, err)
+	doc2, err := vex.Open("testdata/v001-2.vex.json")
+	require.NoError(t, err)
+
+	doc3, err := vex.Open("testdata/v020-1.vex.json")
+	require.NoError(t, err)
+	doc4, err := vex.Open("testdata/v020-2.vex.json")
+	require.NoError(t, err)
+
+	impl := defaultVexCtlImplementation{}
+	for _, tc := range []struct {
+		opts        MergeOptions
+		docs        []*vex.VEX
+		expectedDoc *vex.VEX
+		shouldErr   bool
+	}{
+		// Zero docs should fail
+		{
+			opts:        MergeOptions{},
+			docs:        []*vex.VEX{},
+			expectedDoc: &vex.VEX{},
+			shouldErr:   true,
+		},
+		// One doc results in the same doc
+		{
+			opts:        MergeOptions{},
+			docs:        []*vex.VEX{doc1},
+			expectedDoc: doc1,
+			shouldErr:   false,
+		},
+		// Two docs, as they are
+		{
+			opts: MergeOptions{},
+			docs: []*vex.VEX{doc1, doc2},
+			expectedDoc: &vex.VEX{
+				Metadata: vex.Metadata{},
+				Statements: []vex.Statement{
+					doc1.Statements[0],
+					doc2.Statements[0],
+				},
+			},
+			shouldErr: false,
+		},
+		// Two docs, filter product
+		{
+			opts: MergeOptions{
+				Products: []string{"pkg:apk/wolfi/git@2.41.0-1"},
+			},
+			docs: []*vex.VEX{doc3, doc4},
+			expectedDoc: &vex.VEX{
+				Metadata: vex.Metadata{},
+				Statements: []vex.Statement{
+					doc4.Statements[0],
+				},
+			},
+			shouldErr: false,
+		},
+		// Two docs, filter vulnerability
+		{
+			opts: MergeOptions{
+				Vulnerabilities: []string{"CVE-9876-54321"},
+			},
+			docs: []*vex.VEX{doc3, doc4},
+			expectedDoc: &vex.VEX{
+				Metadata: vex.Metadata{},
+				Statements: []vex.Statement{
+					doc3.Statements[0],
+				},
+			},
+			shouldErr: false,
+		},
+	} {
+		doc, err := impl.Merge(ctx, &tc.opts, tc.docs)
+		if tc.shouldErr {
+			require.Error(t, err)
+			continue
+		}
+
+		// Check doc
+		require.Len(t, doc.Statements, len(tc.expectedDoc.Statements))
+		require.Equal(t, doc.Statements, tc.expectedDoc.Statements)
 	}
 }

@@ -1,0 +1,16 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-99f523e8cec348eb9917eefe85cd335410946391b959a8b6dab80f3514c8546c",
+  "author": "John Doe",
+  "role": "Senior Trusted VEX Issuer",
+  "statements": [
+    {
+      "timestamp": "2022-12-22T16:36:43-05:00",
+      "products": [
+        { "@id": "pkg:apk/wolfi/git@2.41.0-1" }
+      ],
+      "vulnerability": { "name": "CVE-1234-5678" },
+      "status": "under_investigation"
+    }
+  ]
+}
