@@ -13,32 +13,32 @@ import (
 	"github.com/openvex/go-vex/pkg/vex"
 )
 
-func addShow(parentCmd *cobra.Command) {
-	showCmd := &cobra.Command{
-		Short: fmt.Sprintf("%s show: shows valid status or justification options", appname),
-		Long: fmt.Sprintf(`%s show: show the valid input options according to the OpenVEX spec
+func addList(parentCmd *cobra.Command) {
+	listCmd := &cobra.Command{
+		Short: fmt.Sprintf("%s list: lists valid status or justification options", appname),
+		Long: fmt.Sprintf(`%s list: list the valid input options according to the OpenVEX spec
 
 When composing VEX documents it is important to ensure the VEX specification
-is being adhered to for fields that require specific values. The show subcommand
+is being adhered to for fields that require specific values. The list subcommand
 will provide the valid options for fields such as status or justification.
 
 Examples:
 
-# Show the status options
-%s show status
+# list the status options
+%s list status
 
-# show the justification options
-%s show justification
+# list the justification options
+%s list justification
 
 
 `, appname, appname, appname),
-		Use:               "show",
+		Use:               "list",
 		SilenceUsage:      false,
 		SilenceErrors:     false,
 		PersistentPreRunE: initLogging,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				return fmt.Errorf("Selection of 'status' or 'justification' is required")
+				return fmt.Errorf("selection of 'status' or 'justification' is required")
 			}
 			for _, v := range args {
 				switch v {
@@ -53,12 +53,12 @@ Examples:
 						fmt.Printf("\t%s\n", justification)
 					}
 				default:
-					return fmt.Errorf("%s is not a valid selection - available options are 'status' and 'justification' \n", v)
+					return fmt.Errorf("%s is not a valid selection - available options are 'status' and 'justification'", v)
 				}
 			}
 			return nil
 		},
 	}
 
-	parentCmd.AddCommand(showCmd)
+	parentCmd.AddCommand(listCmd)
 }
