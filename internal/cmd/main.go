@@ -53,6 +53,7 @@ func init() {
 	addAttest(rootCmd)
 	addMerge(rootCmd)
 	addCreate(rootCmd)
+	addShow(rootCmd)
 	rootCmd.AddCommand(version.WithFont("doom"))
 }
 
