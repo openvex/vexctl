@@ -281,3 +281,24 @@ func timeFromEnv() (time.Time, error) {
 	}
 	return t, nil
 }
+
+func writeDocument(doc *vex.VEX, filepath string) error {
+	out := os.Stdout
+	if filepath != "" {
+		f, err := os.Create(filepath)
+		if err != nil {
+			return fmt.Errorf("opening VEX file to write document: %w", err)
+		}
+		out = f
+		defer f.Close()
+	}
+
+	if err := doc.ToJSON(out); err != nil {
+		return fmt.Errorf("writing new VEX document: %w", err)
+	}
+
+	if filepath != "" {
+		fmt.Fprintf(os.Stderr, " > VEX document written to %s\n", filepath)
+	}
+	return nil
+}

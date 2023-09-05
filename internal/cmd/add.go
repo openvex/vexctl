@@ -8,7 +8,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -157,27 +156,9 @@ specify a new file using the --file flag.
 			}
 			doc.Statements = append(doc.Statements, statement)
 			doc.Version++
-			out := os.Stdout
 
-			if opts.inPlace {
-				opts.outFilePath = opts.documentPath
-			}
-
-			if opts.outFilePath != "" {
-				f, err := os.Create(opts.outFilePath)
-				if err != nil {
-					return fmt.Errorf("opening VEX file to write document: %w", err)
-				}
-				out = f
-				defer f.Close()
-			}
-
-			if err := doc.ToJSON(out); err != nil {
-				return fmt.Errorf("writing new VEX document: %w", err)
-			}
-
-			if opts.outFilePath != "" {
-				fmt.Fprintf(os.Stderr, " > VEX document written to %s\n", opts.outFilePath)
+			if err := writeDocument(doc, opts.outFilePath); err != nil {
+				return fmt.Errorf("writing openvex document: %w", err)
 			}
 			return nil
 		},
