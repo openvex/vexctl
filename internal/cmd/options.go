@@ -268,3 +268,16 @@ func (of *outFileOption) AddFlags(cmd *cobra.Command) {
 func (of *outFileOption) Validate() error {
 	return nil
 }
+
+func timeFromEnv() (time.Time, error) {
+	t := time.Now()
+	nt, err := vex.DateFromEnv()
+	if err != nil {
+		return t, fmt.Errorf("reading SOURCE_DATE_EPOCH from env: %w", err)
+	}
+
+	if nt != nil {
+		t = *nt
+	}
+	return t, nil
+}
