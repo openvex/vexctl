@@ -10,10 +10,10 @@ import (
 	"testing"
 
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/stretchr/testify/require"
 
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/openvex/vexctl/pkg/attestation"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNormalizeImageRefs(t *testing.T) {
@@ -195,8 +195,8 @@ func TestMerge(t *testing.T) {
 	doc4, err := vex.Open("testdata/v020-2.vex.json")
 	require.NoError(t, err)
 
-	impl := defaultVexCtlImplementation{}
-	for _, tc := range []struct {
+	tests := []struct {
+		name        string
 		opts        MergeOptions
 		docs        []*vex.VEX
 		expectedDoc *vex.VEX
@@ -204,6 +204,7 @@ func TestMerge(t *testing.T) {
 	}{
 		// Zero docs should fail
 		{
+			name:        "Zero docs should fail",
 			opts:        MergeOptions{},
 			docs:        []*vex.VEX{},
 			expectedDoc: &vex.VEX{},
@@ -211,6 +212,7 @@ func TestMerge(t *testing.T) {
 		},
 		// One doc results in the same doc
 		{
+			name:        "One doc results in the same doc",
 			opts:        MergeOptions{},
 			docs:        []*vex.VEX{doc1},
 			expectedDoc: doc1,
@@ -218,6 +220,7 @@ func TestMerge(t *testing.T) {
 		},
 		// Two docs, as they are
 		{
+			name: "Two docs, as they are",
 			opts: MergeOptions{},
 			docs: []*vex.VEX{doc1, doc2},
 			expectedDoc: &vex.VEX{
@@ -231,6 +234,7 @@ func TestMerge(t *testing.T) {
 		},
 		// Two docs, filter product
 		{
+			name: "Two docs, filter product",
 			opts: MergeOptions{
 				Products: []string{"pkg:apk/wolfi/git@2.41.0-1"},
 			},
@@ -245,6 +249,7 @@ func TestMerge(t *testing.T) {
 		},
 		// Two docs, filter vulnerability
 		{
+			name: " Two docs, filter vulnerability",
 			opts: MergeOptions{
 				Vulnerabilities: []string{"CVE-9876-54321"},
 			},
@@ -257,15 +262,19 @@ func TestMerge(t *testing.T) {
 			},
 			shouldErr: false,
 		},
-	} {
-		doc, err := impl.Merge(ctx, &tc.opts, tc.docs)
-		if tc.shouldErr {
-			require.Error(t, err)
-			continue
-		}
+	}
 
-		// Check doc
-		require.Len(t, doc.Statements, len(tc.expectedDoc.Statements))
-		require.Equal(t, doc.Statements, tc.expectedDoc.Statements)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			impl := defaultVexCtlImplementation{}
+			doc, err := impl.Merge(ctx, &test.opts, test.docs) //nolint: gosec
+			if test.shouldErr {
+				require.Error(t, err)
+				return
+			}
+			// Check doc
+			require.Len(t, doc.Statements, len(test.expectedDoc.Statements))
+			require.Equal(t, doc.Statements, test.expectedDoc.Statements)
+		})
 	}
 }
