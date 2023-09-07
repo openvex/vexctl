@@ -19,11 +19,11 @@ jobs:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v3
       - uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v3
         with:
-          go-version: '1.20'
+          go-version: '1.21'
           check-latest: true
           cache: true
       - name: golangci-lint
         uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc # v3.7.0
         with:
-          version: v1.52
+          version: v1.54
           args: --timeout=5m
