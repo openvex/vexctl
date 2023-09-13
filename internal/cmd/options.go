@@ -268,3 +268,37 @@ func (of *outFileOption) AddFlags(cmd *cobra.Command) {
 func (of *outFileOption) Validate() error {
 	return nil
 }
+
+func timeFromEnv() (time.Time, error) {
+	t := time.Now()
+	nt, err := vex.DateFromEnv()
+	if err != nil {
+		return t, fmt.Errorf("reading SOURCE_DATE_EPOCH from env: %w", err)
+	}
+
+	if nt != nil {
+		t = *nt
+	}
+	return t, nil
+}
+
+func writeDocument(doc *vex.VEX, filepath string) error {
+	out := os.Stdout
+	if filepath != "" {
+		f, err := os.Create(filepath)
+		if err != nil {
+			return fmt.Errorf("opening VEX file to write document: %w", err)
+		}
+		out = f
+		defer f.Close()
+	}
+
+	if err := doc.ToJSON(out); err != nil {
+		return fmt.Errorf("writing new VEX document: %w", err)
+	}
+
+	if filepath != "" {
+		fmt.Fprintf(os.Stderr, " > VEX document written to %s\n", filepath)
+	}
+	return nil
+}

@@ -8,7 +8,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -129,23 +128,8 @@ Examples:
 				return fmt.Errorf("generating document id: %w", err)
 			}
 
-			out := os.Stdout
-
-			if opts.outFilePath != "" {
-				f, err := os.Create(opts.outFilePath)
-				if err != nil {
-					return fmt.Errorf("opening VEX file to write document: %w", err)
-				}
-				out = f
-				defer f.Close()
-			}
-
-			if err := newDoc.ToJSON(out); err != nil {
-				return fmt.Errorf("writing new VEX document: %w", err)
-			}
-
-			if opts.outFilePath != "" {
-				fmt.Fprintf(os.Stderr, " > VEX document written to %s\n", opts.outFilePath)
+			if err := writeDocument(&newDoc, opts.outFilePath); err != nil {
+				return fmt.Errorf("writing openvex document: %w", err)
 			}
 			return nil
 		},
