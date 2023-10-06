@@ -19,75 +19,83 @@ import (
 func TestNormalizeImageRefs(t *testing.T) {
 	impl := defaultVexCtlImplementation{}
 	for _, tc := range []struct {
+		name         string
 		products     []string
-		expectedGood []string
-		expectedBad  []string
+		expectedGood []productRef
+		expectedBad  []productRef
 		shouldFail   bool
 	}{
-		// docker hub reference
 		{
+			name:         "docker hub reference",
 			products:     []string{"nginx"},
-			expectedGood: []string{"nginx"},
-			expectedBad:  []string{},
+			expectedGood: []productRef{{Name: "nginx", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			expectedBad:  []productRef{},
 			shouldFail:   false,
 		},
-		// Custom registry
 		{
+			name:         "custom registry",
 			products:     []string{"registry.k8s.io/kube-apiserver"},
-			expectedGood: []string{"registry.k8s.io/kube-apiserver"},
-			expectedBad:  []string{},
+			expectedGood: []productRef{{Name: "registry.k8s.io/kube-apiserver", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			expectedBad:  []productRef{},
 			shouldFail:   false,
 		},
-		// Custom registry, tagged image
 		{
+			name:         "Custom registry, tagged image",
 			products:     []string{"registry.k8s.io/kube-apiserver:v1.26.0"},
-			expectedGood: []string{"registry.k8s.io/kube-apiserver:v1.26.0"},
-			expectedBad:  []string{},
+			expectedGood: []productRef{{Name: "registry.k8s.io/kube-apiserver:v1.26.0", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			expectedBad:  []productRef{},
 			shouldFail:   false,
 		},
-		// purl, custom registry
 		{
+			name:         "purl, custom registry",
 			products:     []string{"pkg:oci/kube-apiserver?repository_url=registry.k8s.io&tag=v1.26.0"},
-			expectedGood: []string{"registry.k8s.io/kube-apiserver:v1.26.0"},
-			expectedBad:  []string{},
+			expectedGood: []productRef{{Name: "registry.k8s.io/kube-apiserver:v1.26.0", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			expectedBad:  []productRef{},
 			shouldFail:   false,
 		},
-		// purl, dockerhub
 		{
+			name:         "purl, dockerhub",
 			products:     []string{"pkg:oci/nginx"},
-			expectedGood: []string{"nginx"},
-			expectedBad:  []string{},
+			expectedGood: []productRef{{Name: "nginx", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			expectedBad:  []productRef{},
 			shouldFail:   false,
 		},
-		// purl, with digest
 		{
-			products:     []string{"pkg:oci/alpine@sha256%3Af271e74b17ced29b915d351685fd4644785c6d1559dd1f2d4189a5e851ef753a"},
-			expectedGood: []string{"alpine@sha256:f271e74b17ced29b915d351685fd4644785c6d1559dd1f2d4189a5e851ef753a"},
-			expectedBad:  []string{},
-			shouldFail:   false,
+			name:     "purl, with digest",
+			products: []string{"pkg:oci/alpine@sha256%3Af271e74b17ced29b915d351685fd4644785c6d1559dd1f2d4189a5e851ef753a"},
+			expectedGood: []productRef{{
+				Name: "alpine@sha256:f271e74b17ced29b915d351685fd4644785c6d1559dd1f2d4189a5e851ef753a",
+				Hashes: map[vex.Algorithm]vex.Hash{
+					vex.SHA256: vex.Hash("f271e74b17ced29b915d351685fd4644785c6d1559dd1f2d4189a5e851ef753a"),
+				},
+			}},
+			expectedBad: []productRef{},
+			shouldFail:  false,
 		},
-		// other purl
 		{
+			name:         "other purl",
 			products:     []string{"pkg:apk/wolfi/bash@1.0.0"},
-			expectedGood: []string{},
-			expectedBad:  []string{"pkg:apk/wolfi/bash@1.0.0"},
+			expectedGood: []productRef{},
+			expectedBad:  []productRef{{Name: "pkg:apk/wolfi/bash@1.0.0", Hashes: make(map[vex.Algorithm]vex.Hash)}},
 			shouldFail:   false,
 		},
-		// mixed good and bad
 		{
+			name:         "mixed image ref and non-oci purl",
 			products:     []string{"pkg:apk/wolfi/bash@1.0.0", "nginx"},
-			expectedGood: []string{"nginx"},
-			expectedBad:  []string{"pkg:apk/wolfi/bash@1.0.0"},
+			expectedGood: []productRef{{Name: "nginx", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			expectedBad:  []productRef{{Name: "pkg:apk/wolfi/bash@1.0.0", Hashes: make(map[vex.Algorithm]vex.Hash)}},
 			shouldFail:   false,
 		},
 	} {
-		good, bad, err := impl.NormalizeImageRefs(tc.products)
-		if tc.shouldFail {
-			require.Error(t, err)
-			continue
-		}
-		require.Equal(t, tc.expectedGood, good)
-		require.Equal(t, tc.expectedBad, bad)
+		t.Run(tc.name, func(t *testing.T) {
+			good, bad, err := impl.NormalizeImageRefs(tc.products)
+			if tc.shouldFail {
+				require.Error(t, err)
+				return
+			}
+			require.Equal(t, tc.expectedGood, good)
+			require.Equal(t, tc.expectedBad, bad)
+		})
 	}
 }
 
@@ -267,7 +275,7 @@ func TestMerge(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			impl := defaultVexCtlImplementation{}
-			doc, err := impl.Merge(ctx, &test.opts, test.docs) //nolint: gosec
+			doc, err := impl.Merge(ctx, &test.opts, test.docs)
 			if test.shouldErr {
 				require.Error(t, err)
 				return

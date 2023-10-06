@@ -13,6 +13,7 @@ import (
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/sirupsen/logrus"
 
+	intoto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/openvex/vexctl/pkg/attestation"
 )
 
@@ -27,6 +28,13 @@ type Options struct {
 	Products []string // List of products to match in CSAF docs
 	Format   string   // Firmat of the vex documents
 	Sign     bool     // When true, attestations will be signed before attaching
+}
+
+// ProductRefs is a struct that captures a resolved component reference string
+// and any hashes associated with it.
+type productRef struct {
+	Name   string
+	Hashes map[vex.Algorithm]vex.Hash
 }
 
 func New() *VexCtl {
@@ -96,7 +104,24 @@ func (vexctl *VexCtl) Attest(vexDataPath string, manSubjects []string) (*attesta
 		logrus.Warnf(errNoImage, otherSubjects)
 	}
 
-	if err := att.AddImageSubjects(imageSubjects); err != nil {
+	subs := []intoto.Subject{}
+	for _, sub := range imageSubjects {
+		d := map[string]string{}
+		for a, h := range sub.Hashes {
+			switch a {
+			case vex.SHA256:
+				d["sha256"] = string(h)
+			case vex.SHA512:
+				d["sha512"] = string(h)
+			}
+		}
+		subs = append(subs, intoto.Subject{
+			Name:   sub.Name,
+			Digest: d,
+		})
+	}
+
+	if err := att.AddSubjects(subs); err != nil {
 		return nil, fmt.Errorf("adding image references to attestation: %w", err)
 	}
 
