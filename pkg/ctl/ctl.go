@@ -69,8 +69,8 @@ func (vexctl *VexCtl) Apply(r *sarif.Report, vexDocs []*vex.VEX) (finalReport *s
 	return finalReport, nil
 }
 
-// Generate an attestation from a VEX
-func (vexctl *VexCtl) Attest(vexDataPath string, manSubjects []string) (*attestation.Attestation, error) {
+// Attest generates an attestation from a list of identifiers
+func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*attestation.Attestation, error) {
 	doc, err := vexctl.impl.OpenVexData(vexctl.Options, []string{vexDataPath})
 	if err != nil {
 		return nil, fmt.Errorf("opening vex data: %w", err)
@@ -79,14 +79,17 @@ func (vexctl *VexCtl) Attest(vexDataPath string, manSubjects []string) (*attesta
 	// Generate the attestation
 	att := attestation.New()
 	att.Predicate = *doc[0]
-	subjects := manSubjects
+	subjects := []productRef{}
+	for _, s := range subjectStrings {
+		subjects = append(subjects, productRef{Name: s})
+	}
 
 	// If we did not get a specific list of subjects to attest, we default
 	// to the products of the VEX document.
-	if len(manSubjects) == 0 {
+	if len(subjects) == 0 {
 		subjects, err = vexctl.impl.ListDocumentProducts(doc[0])
 		if err != nil {
-			return nil, fmt.Errorf("listing document products")
+			return nil, fmt.Errorf("listing document products: %w", err)
 		}
 	}
 
@@ -97,7 +100,7 @@ func (vexctl *VexCtl) Attest(vexDataPath string, manSubjects []string) (*attesta
 
 	if len(otherSubjects) != 0 {
 		// if subject are manual, fail
-		if len(manSubjects) > 0 {
+		if len(subjectStrings) > 0 {
 			return nil, fmt.Errorf(errNoImage, otherSubjects)
 		}
 		// if from a doc, we ignore and skip

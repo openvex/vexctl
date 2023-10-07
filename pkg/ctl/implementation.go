@@ -48,8 +48,8 @@ type Implementation interface {
 	ReadImageAttestations(context.Context, Options, string) ([]*vex.VEX, error)
 	Merge(context.Context, *MergeOptions, []*vex.VEX) (*vex.VEX, error)
 	LoadFiles(context.Context, []string) ([]*vex.VEX, error)
-	ListDocumentProducts(*vex.VEX) ([]string, error)
-	NormalizeImageRefs(subjects []string) ([]productRef, []productRef, error)
+	ListDocumentProducts(doc *vex.VEX) ([]productRef, error)
+	NormalizeImageRefs([]productRef) ([]productRef, []productRef, error)
 	VerifyImageSubjects(*attestation.Attestation, *vex.VEX) error
 }
 
@@ -129,7 +129,7 @@ func (impl *defaultVexCtlImplementation) OpenVexData(_ Options, paths []string) 
 	for _, path := range paths {
 		doc, err := vex.Open(path)
 		if err != nil {
-			return nil, fmt.Errorf("opening VEX document")
+			return nil, fmt.Errorf("opening VEX document: %w", err)
 		}
 		vexes = append(vexes, doc)
 	}
@@ -417,53 +417,72 @@ func (impl *defaultVexCtlImplementation) LoadFiles(
 	return vexes, nil
 }
 
-// ListDocumentProducts lists the main identifier of the products in a given document
-func (impl *defaultVexCtlImplementation) ListDocumentProducts(doc *vex.VEX) ([]string, error) {
+// ListDocumentProducts returns an array of all the prodicts in the document
+func (impl *defaultVexCtlImplementation) ListDocumentProducts(doc *vex.VEX) ([]productRef, error) {
 	if doc == nil {
 		return nil, errors.New("cannot read subjects, vex document is nil")
 	}
-	inv := map[string]struct{}{}
-	products := []string{}
+	inv := map[string]map[vex.Algorithm]vex.Hash{}
+	products := []productRef{}
 	for i := range doc.Statements {
 		for _, p := range doc.Statements[i].Products {
 			switch {
 			case p.ID != "":
-				inv[p.ID] = struct{}{}
+				inv[p.ID] = p.Hashes
 			case len(p.Identifiers) > 0:
 				if i, ok := p.Identifiers[vex.PURL]; ok {
-					inv[i] = struct{}{}
+					inv[i] = p.Hashes
 					continue
 				}
 				for _, id := range p.Identifiers {
-					inv[id] = struct{}{}
+					inv[id] = p.Hashes
 				}
 			case len(p.Hashes) > 0:
 				for _, hash := range p.Hashes {
-					inv[string(hash)] = struct{}{}
+					inv[string(hash)] = p.Hashes
 					continue
 				}
 			}
 		}
 	}
-	for p := range inv {
-		products = append(products, p)
+
+	// Sort the identifier list to make the return value deterministic
+	ids := []string{}
+	for id := range inv {
+		ids = append(ids, id)
 	}
-	sort.Strings(products)
+
+	sort.Strings(ids)
+
+	for _, id := range ids {
+		h := inv[id]
+		if h == nil {
+			h = make(map[vex.Algorithm]vex.Hash)
+		}
+		products = append(products, productRef{
+			Name:   id,
+			Hashes: h,
+		})
+	}
 	return products, nil
 }
 
 // NormalizeImageRefs returns a list of image references from a list of
 // VEX products. oci:purls are transformed into image references. All non
 // container image identifiers are untouched and returned in their own array.
-func (impl *defaultVexCtlImplementation) NormalizeImageRefs(subjects []string) (
+func (impl *defaultVexCtlImplementation) NormalizeImageRefs(subjects []productRef) (
 	imageRefs, otherRefs []productRef, err error,
 ) {
 	imageRefs = []productRef{}
 	otherRefs = []productRef{}
-	for _, s := range subjects {
-		if strings.HasPrefix(s, "pkg:oci/") || strings.HasPrefix(s, "pkg:/oci/") {
+	for _, pref := range subjects {
+		if pref.Hashes == nil {
+			pref.Hashes = make(map[vex.Algorithm]vex.Hash)
+		}
+		if strings.HasPrefix(pref.Name, "pkg:oci/") ||
+			strings.HasPrefix(pref.Name, "pkg:/oci/") { // Some buggy tools add this wrong slash
 			// Deduct image purls to the reference as much as possible
-			p, err := purl.FromString(s)
+			p, err := purl.FromString(pref.Name)
 			if err != nil {
 				return nil, nil, fmt.Errorf("parsing purl subject: %s", err)
 			}
@@ -493,31 +512,25 @@ func (impl *defaultVexCtlImplementation) NormalizeImageRefs(subjects []string) (
 			} else if tag, ok := qs["tag"]; ok {
 				ref += ":" + tag
 			}
-
-			logrus.Debugf("%s is a purl for %s", s, ref)
-			pref := productRef{
-				Name:   ref,
-				Hashes: map[vex.Algorithm]vex.Hash{},
-			}
 			if algo != "" {
 				pref.Hashes[algo] = hash
 			}
+			pref.Name = ref
+			logrus.Debugf("%s is a purl for %s", pref.Name, ref)
 			imageRefs = append(imageRefs, pref)
 
 			// All other purls go straight in, no hashes
-		} else if strings.HasPrefix(s, "pkg:") {
-			otherRefs = append(otherRefs, productRef{
-				Name:   s,
-				Hashes: map[vex.Algorithm]vex.Hash{},
-			})
+		} else if strings.HasPrefix(pref.Name, "pkg:") {
+			//			logrus.Warnf("Passing through %s", pref.Name)
+			otherRefs = append(otherRefs, pref)
 		} else {
 			// If not,try to parse the string as an image reference. Attestting
 			// will fail if they are not images.
-			_, err := name.ParseReference(s)
+			_, err := name.ParseReference(pref.Name)
 			if err == nil {
-				imageRefs = append(imageRefs, productRef{Name: s, Hashes: map[vex.Algorithm]vex.Hash{}})
+				imageRefs = append(imageRefs, pref)
 			} else {
-				otherRefs = append(otherRefs, productRef{Name: s, Hashes: map[vex.Algorithm]vex.Hash{}})
+				otherRefs = append(otherRefs, pref)
 			}
 		}
 	}

@@ -38,9 +38,9 @@ write it to stdout:
 Without any more arguments, images defined as products in the VEX statements,
 will be read by %s and transferred to the attestation's subjects when required.
 If the products are purls of type oci:, they will be converted to image
-references as is customery in the sigstore tooling. For example:
+references as is customary in the sigstore tooling. For example:
 
-If a product identified by the following purl is found in a statement:
+If a product identified by the following package URL is found in a statement:
 
   pkg:oci/kube-apiserver?repository_url=registry.k8s.io&tag=v1.26.0
 
@@ -52,7 +52,7 @@ Any purls and image references not specifying a digest will trigger a network
 lookup to read the image digest from the registry.
 
 Please note that purls of types other than oci: and other strings which are not
-valid image references will not included in the attestation. 
+valid image references will not be included in the resulting attestation. 
 
 Signing Attestations
 --------------------
