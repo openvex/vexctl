@@ -52,17 +52,21 @@ This is the resulting document:
 
 ```json
 {
-  "@context": "https://openvex.dev/ns",
-  "@id": "https://openvex.dev/docs/public/vex-23429cd0c468676c544579ddc118d76b5aa52aff8203c332d2c14dc2a415a551",
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-adc52fe6c8d2ba0feee7f4343f9b40c90e8cdb077817f880a6650502aece82bc",
   "author": "Unknown Author",
-  "role": "Document Creator",
-  "timestamp": "2023-02-03T08:10:46.087206-07:00",
-  "version": "1",
+  "timestamp": "2023-10-07T23:32:07.620932-08:00",
+  "version": 1,
   "statements": [
     {
-      "vulnerability": "CVE-2014-123456",
+      "vulnerability": {
+        "name": "CVE-2014-123456"
+      },
+      "timestamp": "2023-10-07T23:32:07.620932-08:00",
       "products": [
-        "pkg:apk/wolfi/git@2.38.1-r0?arch=x86_64"
+        {
+          "@id": "pkg:apk/wolfi/git@2.38.1-r0?arch=x86_64"
+        }
       ],
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist"
@@ -89,8 +93,8 @@ in this repository:
 
 ```
 vexctl merge --product=pkg:apk/wolfi/bash@1.0.0 \
-             pkg/ctl/testdata/document1.vex.json \
-             pkg/ctl/testdata/document2.vex.json
+             examples/openvex/document1.vex.json \
+             examples/openvex/document2.vex.json
 ```
 The resulting document combines the VEX statements that express data about
 `bash@1.0.0` into a single document that tells the whole story of how `CVE-2014-123456`
@@ -98,26 +102,33 @@ was `under_investigation` and then `fixed` four hours later:
 
 ```json
 {
-  "@context": "",
-  "@id": "merged-vex-67124ea942ef30e1f42f3f2bf405fbbc4f5a56e6e87684fc5cd957212fa3e025",
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-077a7a26ee6f351b86fba3206d39e1872cb726f955ce18535b2e890cc20a8bf6",
   "author": "Unknown Author",
-  "role": "Document Creator",
-  "timestamp": "2023-02-03T08:11:42.525456-07:00",
-  "version": "",
+  "timestamp": "2023-10-07T23:33:45.966496-08:00",
+  "version": 1,
   "statements": [
     {
-      "vulnerability": "CVE-1234-5678",
+      "vulnerability": {
+        "name": "CVE-1234-5678"
+      },
       "timestamp": "2022-12-22T16:36:43-05:00",
       "products": [
-        "pkg:apk/wolfi/bash@1.0.0"
+        {
+          "@id": "pkg:apk/wolfi/bash@1.0.0"
+        }
       ],
       "status": "under_investigation"
     },
     {
-      "vulnerability": "CVE-1234-5678",
+      "vulnerability": {
+        "name": "CVE-1234-5678"
+      },
       "timestamp": "2022-12-22T20:56:05-05:00",
       "products": [
-        "pkg:apk/wolfi/bash@1.0.0"
+        {
+          "@id": "pkg:apk/wolfi/bash@1.0.0"
+        }
       ],
       "status": "fixed"
     }
