@@ -43,13 +43,13 @@ type Implementation interface {
 	OpenVexData(Options, []string) ([]*vex.VEX, error)
 	Sort(docs []*vex.VEX) []*vex.VEX
 	AttestationBytes(*attestation.Attestation) ([]byte, error)
-	Attach(context.Context, *attestation.Attestation) error
+	Attach(context.Context, *attestation.Attestation, ...string) error
 	SourceType(uri string) (string, error)
 	ReadImageAttestations(context.Context, Options, string) ([]*vex.VEX, error)
 	Merge(context.Context, *MergeOptions, []*vex.VEX) (*vex.VEX, error)
 	LoadFiles(context.Context, []string) ([]*vex.VEX, error)
 	ListDocumentProducts(doc *vex.VEX) ([]productRef, error)
-	NormalizeImageRefs([]productRef) ([]productRef, []productRef, error)
+	NormalizeProducts([]productRef) ([]productRef, []productRef, []productRef, error)
 	VerifyImageSubjects(*attestation.Attestation, *vex.VEX) error
 }
 
@@ -149,7 +149,10 @@ func (impl *defaultVexCtlImplementation) AttestationBytes(att *attestation.Attes
 	return b.Bytes(), nil
 }
 
-func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attestation.Attestation) error {
+// Attach attaches an attestation to a container image in the registry using
+// the sigstore libraries. If No references are provided, vexctl will try to
+// attach it to all the attestation subjects that parse as image references.
+func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attestation.Attestation, refs ...string) error {
 	env := ssldsse.Envelope{}
 
 	var b bytes.Buffer
@@ -168,13 +171,22 @@ func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attest
 		}
 
 		if env.PayloadType != IntotoPayloadType {
-			return fmt.Errorf("invalid payloadType %s on envelope. Expected %s", env.PayloadType, types.IntotoPayloadType)
+			return fmt.Errorf("invalid payloadType %s on envelope, expected %s", env.PayloadType, types.IntotoPayloadType)
 		}
 
-		// At this point all sibjects in the attestation should be image refs
-		for _, s := range att.Subject {
-			if err := attachAttestation(ctx, payload, s.Name); err != nil {
-				return fmt.Errorf("attaching attestation to %s: %w", s.Name, err)
+		if len(refs) == 0 {
+			for _, s := range att.Subject {
+				if _, err := name.ParseReference(s.Name); err != nil {
+					logrus.Infof("Skipping attaching to %s. It is not an image reference", s.Name)
+					continue
+				}
+				refs = append(refs, s.Name)
+			}
+		}
+
+		for _, ref := range refs {
+			if err := attachAttestation(ctx, payload, ref); err != nil {
+				return fmt.Errorf("attaching attestation to %s: %w", ref, err)
 			}
 		}
 	}
@@ -470,11 +482,13 @@ func (impl *defaultVexCtlImplementation) ListDocumentProducts(doc *vex.VEX) ([]p
 // NormalizeImageRefs returns a list of image references from a list of
 // VEX products. oci:purls are transformed into image references. All non
 // container image identifiers are untouched and returned in their own array.
-func (impl *defaultVexCtlImplementation) NormalizeImageRefs(subjects []productRef) (
-	imageRefs, otherRefs []productRef, err error,
+func (impl *defaultVexCtlImplementation) NormalizeProducts(subjects []productRef) (
+	imageRefs, otherRefs, unattestableRefs []productRef, err error,
 ) {
 	imageRefs = []productRef{}
 	otherRefs = []productRef{}
+	unattestableRefs = []productRef{}
+
 	for _, pref := range subjects {
 		if pref.Hashes == nil {
 			pref.Hashes = make(map[vex.Algorithm]vex.Hash)
@@ -484,7 +498,7 @@ func (impl *defaultVexCtlImplementation) NormalizeImageRefs(subjects []productRe
 			// Deduct image purls to the reference as much as possible
 			p, err := purl.FromString(pref.Name)
 			if err != nil {
-				return nil, nil, fmt.Errorf("parsing purl subject: %s", err)
+				return nil, nil, nil, fmt.Errorf("parsing OCI purl subject: %s", err)
 			}
 
 			ref := ""
@@ -518,27 +532,30 @@ func (impl *defaultVexCtlImplementation) NormalizeImageRefs(subjects []productRe
 			pref.Name = ref
 			logrus.Debugf("%s is a purl for %s", pref.Name, ref)
 			imageRefs = append(imageRefs, pref)
-
-			// All other purls go straight in, no hashes
 		} else if strings.HasPrefix(pref.Name, "pkg:") {
-			//			logrus.Warnf("Passing through %s", pref.Name)
-			otherRefs = append(otherRefs, pref)
+			// When there are other purls, we only attest them as subjects if
+			// the product reference has hashes
+			if pref.Hashes != nil && len(pref.Hashes) > 0 {
+				otherRefs = append(otherRefs, pref)
+			} else {
+				unattestableRefs = append(unattestableRefs, pref)
+			}
 		} else {
-			// If not,try to parse the string as an image reference. Attestting
-			// will fail if they are not images.
-			_, err := name.ParseReference(pref.Name)
-			if err == nil {
+			// If not,try to parse the string as an image reference. If they can
+			// be parsed as image references but they cannot be looked up, attestting
+			// will fail trying to fetch their digests.
+			if _, err := name.ParseReference(pref.Name); err == nil {
 				imageRefs = append(imageRefs, pref)
 			} else {
 				otherRefs = append(otherRefs, pref)
 			}
 		}
 	}
-	return imageRefs, otherRefs, nil
+	return imageRefs, otherRefs, unattestableRefs, nil
 }
 
 // VerifySubjectsPresent takes a list of references and ensures they are present
-// in the document which is being attested
+// in the document that is being attested
 func (impl *defaultVexCtlImplementation) VerifyImageSubjects(
 	att *attestation.Attestation, doc *vex.VEX,
 ) error {
@@ -547,22 +564,22 @@ func (impl *defaultVexCtlImplementation) VerifyImageSubjects(
 		return fmt.Errorf("listing products in the document: %w", err)
 	}
 
-	imageRefs, _, err := impl.NormalizeImageRefs(products)
+	imageRefs, _, _, err := impl.NormalizeProducts(products)
 	if err != nil {
 		return fmt.Errorf("normalizing references: %s", err)
 	}
 
 	found := false
-	for _, sb := range att.Subject {
-		found = false
-		for _, r := range imageRefs {
+	for _, r := range imageRefs {
+		for _, sb := range att.Subject {
+			found = false
 			if sb.Name == r.Name {
 				found = true
 				break
 			}
 		}
 		if !found {
-			return fmt.Errorf("entry for %s not found in document %v", sb.Name, imageRefs)
+			return fmt.Errorf("entry for %s not found in subjects %v", r, imageRefs)
 		}
 	}
 	return nil

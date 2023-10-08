@@ -17,7 +17,7 @@ import (
 	"github.com/openvex/vexctl/pkg/attestation"
 )
 
-const errNoImage = "some entries are not container images: %v"
+const errNotAttestable = "some entries are not attestable as they don't have a hash: %v"
 
 type VexCtl struct {
 	impl    Implementation
@@ -93,23 +93,28 @@ func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*atte
 		}
 	}
 
-	imageSubjects, otherSubjects, err := vexctl.impl.NormalizeImageRefs(subjects)
+	imageSubjects, otherSubjects, unattestableSubjects, err := vexctl.impl.NormalizeProducts(subjects)
 	if err != nil {
 		return nil, fmt.Errorf("normalizing VEX products to attest: %w", err)
 	}
 
-	if len(otherSubjects) != 0 {
-		// if subject are manual, fail
+	if len(unattestableSubjects) != 0 {
+		// If subjects are manual, fail
 		if len(subjectStrings) > 0 {
-			return nil, fmt.Errorf(errNoImage, otherSubjects)
+			return nil, fmt.Errorf(errNotAttestable, unattestableSubjects)
 		}
-		// if from a doc, we ignore and skip
-		logrus.Warnf(errNoImage, otherSubjects)
+		// If we are just checking an existing document, we dont err. We skip
+		// any unattestable subjects.
+		logrus.Warnf(errNotAttestable, unattestableSubjects)
 	}
 
+	allSubjects := []productRef{}
+	allSubjects = append(allSubjects, imageSubjects...)
+	allSubjects = append(allSubjects, otherSubjects...)
 	subs := []intoto.Subject{}
-	for _, sub := range imageSubjects {
+	for _, sub := range allSubjects {
 		d := map[string]string{}
+		// TODO(puerco): Move this logic to the go-vex hash structs
 		for a, h := range sub.Hashes {
 			switch a {
 			case vex.SHA256:
