@@ -149,8 +149,8 @@ func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*atte
 }
 
 // Attach attaches an attestation to a list of images
-func (vexctl *VexCtl) Attach(ctx context.Context, att *attestation.Attestation) (err error) {
-	if err := vexctl.impl.Attach(ctx, att); err != nil {
+func (vexctl *VexCtl) Attach(ctx context.Context, att *attestation.Attestation, refs ...string) (err error) {
+	if err := vexctl.impl.Attach(ctx, att, refs...); err != nil {
 		return fmt.Errorf("attaching attestation: %w", err)
 	}
 
