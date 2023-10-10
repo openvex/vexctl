@@ -13,10 +13,11 @@ import (
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/sirupsen/logrus"
 
+	intoto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/openvex/vexctl/pkg/attestation"
 )
 
-const errNoImage = "some entries are not container images: %v"
+const errNotAttestable = "some entries are not attestable as they don't have a hash: %v"
 
 type VexCtl struct {
 	impl    Implementation
@@ -27,6 +28,13 @@ type Options struct {
 	Products []string // List of products to match in CSAF docs
 	Format   string   // Firmat of the vex documents
 	Sign     bool     // When true, attestations will be signed before attaching
+}
+
+// ProductRefs is a struct that captures a resolved component reference string
+// and any hashes associated with it.
+type productRef struct {
+	Name   string
+	Hashes map[vex.Algorithm]vex.Hash
 }
 
 func New() *VexCtl {
@@ -61,8 +69,8 @@ func (vexctl *VexCtl) Apply(r *sarif.Report, vexDocs []*vex.VEX) (finalReport *s
 	return finalReport, nil
 }
 
-// Generate an attestation from a VEX
-func (vexctl *VexCtl) Attest(vexDataPath string, manSubjects []string) (*attestation.Attestation, error) {
+// Attest generates an attestation from a list of identifiers
+func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*attestation.Attestation, error) {
 	doc, err := vexctl.impl.OpenVexData(vexctl.Options, []string{vexDataPath})
 	if err != nil {
 		return nil, fmt.Errorf("opening vex data: %w", err)
@@ -71,32 +79,57 @@ func (vexctl *VexCtl) Attest(vexDataPath string, manSubjects []string) (*attesta
 	// Generate the attestation
 	att := attestation.New()
 	att.Predicate = *doc[0]
-	subjects := manSubjects
+	subjects := []productRef{}
+	for _, s := range subjectStrings {
+		subjects = append(subjects, productRef{Name: s})
+	}
 
 	// If we did not get a specific list of subjects to attest, we default
 	// to the products of the VEX document.
-	if len(manSubjects) == 0 {
+	if len(subjects) == 0 {
 		subjects, err = vexctl.impl.ListDocumentProducts(doc[0])
 		if err != nil {
-			return nil, fmt.Errorf("listing document products")
+			return nil, fmt.Errorf("listing document products: %w", err)
 		}
 	}
 
-	imageSubjects, otherSubjects, err := vexctl.impl.NormalizeImageRefs(subjects)
+	imageSubjects, otherSubjects, unattestableSubjects, err := vexctl.impl.NormalizeProducts(subjects)
 	if err != nil {
 		return nil, fmt.Errorf("normalizing VEX products to attest: %w", err)
 	}
 
-	if len(otherSubjects) != 0 {
-		// if subject are manual, fail
-		if len(manSubjects) > 0 {
-			return nil, fmt.Errorf(errNoImage, otherSubjects)
+	if len(unattestableSubjects) != 0 {
+		// If subjects are manual, fail
+		if len(subjectStrings) > 0 {
+			return nil, fmt.Errorf(errNotAttestable, unattestableSubjects)
 		}
-		// if from a doc, we ignore and skip
-		logrus.Warnf(errNoImage, otherSubjects)
+		// If we are just checking an existing document, we dont err. We skip
+		// any unattestable subjects.
+		logrus.Warnf(errNotAttestable, unattestableSubjects)
 	}
 
-	if err := att.AddImageSubjects(imageSubjects); err != nil {
+	allSubjects := []productRef{}
+	allSubjects = append(allSubjects, imageSubjects...)
+	allSubjects = append(allSubjects, otherSubjects...)
+	subs := []intoto.Subject{}
+	for _, sub := range allSubjects {
+		d := map[string]string{}
+		// TODO(puerco): Move this logic to the go-vex hash structs
+		for a, h := range sub.Hashes {
+			switch a {
+			case vex.SHA256:
+				d["sha256"] = string(h)
+			case vex.SHA512:
+				d["sha512"] = string(h)
+			}
+		}
+		subs = append(subs, intoto.Subject{
+			Name:   sub.Name,
+			Digest: d,
+		})
+	}
+
+	if err := att.AddSubjects(subs); err != nil {
 		return nil, fmt.Errorf("adding image references to attestation: %w", err)
 	}
 
@@ -116,8 +149,8 @@ func (vexctl *VexCtl) Attest(vexDataPath string, manSubjects []string) (*attesta
 }
 
 // Attach attaches an attestation to a list of images
-func (vexctl *VexCtl) Attach(ctx context.Context, att *attestation.Attestation) (err error) {
-	if err := vexctl.impl.Attach(ctx, att); err != nil {
+func (vexctl *VexCtl) Attach(ctx context.Context, att *attestation.Attestation, refs ...string) (err error) {
+	if err := vexctl.impl.Attach(ctx, att, refs...); err != nil {
 		return fmt.Errorf("attaching attestation: %w", err)
 	}
 
