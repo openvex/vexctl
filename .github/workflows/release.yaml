@@ -18,11 +18,7 @@ jobs:
       packages: write # needed for pushing the images to ghcr.io
 
     env:
-      GO111MODULE: on
       COSIGN_YES: "true"
-
-    outputs:
-      tag_name: ${{ steps.tag.outputs.tag_name }}
 
     steps:
       - name: Check out code onto GOPATH
@@ -41,19 +37,12 @@ jobs:
 
       - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
 
-      - name: Get TAG
-        id: get_tag
-        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
       - name: Set LDFLAGS
         id: ldflags
         run: |
             source ./release/ldflags.sh
             goflags=$(ldflags)
             echo "GO_FLAGS="${goflags}"" >> "$GITHUB_ENV"
-
-      - name: Log into ghcr.io
-        run: echo ${{ secrets.GITHUB_TOKEN }} | ko login ghcr.io -u ${{ github.repository_owner }} --password-stdin
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
@@ -63,6 +52,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LDFLAGS: ${{ env.GO_FLAGS }}
+
+      - name: Log into ghcr.io
+        run: echo ${{ secrets.GITHUB_TOKEN }} | ko login ghcr.io -u ${{ github.repository_owner }} --password-stdin
 
       - name: build images
         run: make build-sign-release-images || true
