@@ -50,7 +50,7 @@ release:
 
 .PHONY: snapshot
 snapshot:
-	LDFLAGS="$(LDFLAGS)" goreleaser release --clean--snapshot --skip=sign,publish --timeout 120m
+	LDFLAGS="$(LDFLAGS)" goreleaser release --clean --snapshot --skip=sign,publish --timeout 120m
 
 .PHONY: ko
 ko:
