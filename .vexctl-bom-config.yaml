@@ -1,0 +1,48 @@
+---
+namespace: https://openvex/vexctl
+license: Apache-2.0
+name: vexctl
+creator:
+ person: The OpenVEX Authors
+ tool: vexctl
+
+artifacts:
+  - type: file
+    source: vexctl-windows-amd64.exe
+    license: Apache-2.0
+    gomodules: true
+
+  - type: file
+    source: vexctl-darwin-amd64
+    license: Apache-2.0
+    gomodules: true
+
+  - type: file
+    source: vexctl-darwin-arm64
+    license: Apache-2.0
+    gomodules: true
+
+  - type: file
+    source: vexctl-linux-amd64
+    license: Apache-2.0
+    gomodules: true
+
+  - type: file
+    source: vexctl-linux-arm
+    license: Apache-2.0
+    gomodules: true
+
+  - type: file
+    source: vexctl-linux-arm64
+    license: Apache-2.0
+    gomodules: true
+
+  - type: file
+    source: vexctl-linux-ppc64le
+    license: Apache-2.0
+    gomodules: true
+
+  - type: file
+    source: vexctl-linux-s390x
+    license: Apache-2.0
+    gomodules: true

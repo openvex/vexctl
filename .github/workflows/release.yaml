@@ -22,7 +22,6 @@ jobs:
       COSIGN_YES: "true"
 
     outputs:
-      hashes: ${{ steps.hash.outputs.hashes }}
       tag_name: ${{ steps.tag.outputs.tag_name }}
 
     steps:
@@ -37,9 +36,10 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@1fc5bd396d372bee37d608f955b336615edf79c8 # v3.2.0
 
+      - name: Install bom
+        uses: puerco/release-actions/setup-bom@dd08496c83441d6477114cc0555b96d404dacff7 # v0.1.2
+
       - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
-        with:
-          version: v0.14.1
 
       - name: Get TAG
         id: get_tag
@@ -56,7 +56,6 @@ jobs:
         run: echo ${{ secrets.GITHUB_TOKEN }} | ko login ghcr.io -u ${{ github.repository_owner }} --password-stdin
 
       - name: Run GoReleaser
-        id: run-goreleaser
         uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
         with:
           version: latest
@@ -65,31 +64,42 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LDFLAGS: ${{ env.GO_FLAGS }}
 
-      - name: Generate subject
-        id: hash
-        env:
-          ARTIFACTS: "${{ steps.run-goreleaser.outputs.artifacts }}"
-        run: |
-          set -euo pipefail
-          checksum_file=$(echo "$ARTIFACTS" | jq -r '.[] | select (.type=="Checksum") | .path')
-          echo "hashes=$(cat $checksum_file | base64 -w0)" >> "$GITHUB_OUTPUT"
-
       - name: build images
         run: make build-sign-release-images || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  provenance:
+  attestation:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: write
+
     needs:
       - release
 
-    permissions:
-      actions: read # To read the workflow path.
-      id-token: write # To sign the provenance.
-      contents: write # To add assets to a release.
+    steps:
+      - name: Check out code onto GOPATH
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 1
 
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.9.0
-    with:
-      base64-subjects: "${{ needs.release.outputs.hashes }}"
-      upload-assets: true # upload to a new release
-      upload-tag-name: "${{ needs.release.outputs.tag_name }}"
+      - name: Set tag output
+        id: tag
+        run: echo "tag_name=${GITHUB_REF#refs/*/}" >> "$GITHUB_OUTPUT"
+
+      - name: Install tejolote
+        uses: puerco/release-actions/setup-tejolote@dd08496c83441d6477114cc0555b96d404dacff7 # v0.1.2
+
+      - run: |
+          tejolote attest --artifacts github://openvex/vexctl/${{ steps.tag.outputs.tag_name }} github://openvex/vexctl/"${GITHUB_RUN_ID}" --output vexctl.intoto.json --sign
+
+      - name: Release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
+        with:
+          files: vexctl.intoto.json
+          tag_name: "${{ steps.tag.outputs.tag_name }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_REPOSITORY: openvex/vexctl
