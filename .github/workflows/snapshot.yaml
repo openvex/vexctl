@@ -1,0 +1,38 @@
+# Copyright 2023 The OpenVEX Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: Snapshot
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code onto GOPATH
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+        with:
+          go-version: '1.21'
+          check-latest: true
+
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
+        with:
+          install-only: true
+
+      - name: Install bom
+        uses: puerco/release-actions/setup-bom@dd08496c83441d6477114cc0555b96d404dacff7 # v0.1.2
+
+      - name: Run Snapshot
+        run: make snapshot
+
+      - name: check binary
+        run: |
+          ./dist/vexctl-linux-amd64 version

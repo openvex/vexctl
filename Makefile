@@ -46,11 +46,11 @@ test:
 
 .PHONY: release
 release:
-	LDFLAGS="$(LDFLAGS)" goreleaser release --rm-dist --timeout 120m
+	LDFLAGS="$(LDFLAGS)" goreleaser release --clean --timeout 120m
 
 .PHONY: snapshot
 snapshot:
-	LDFLAGS="$(LDFLAGS)" goreleaser release --rm-dist --snapshot --skip-sign --skip-publish --timeout 120m
+	LDFLAGS="$(LDFLAGS)" goreleaser release --clean --snapshot --skip=sign,publish --timeout 120m
 
 .PHONY: ko
 ko:

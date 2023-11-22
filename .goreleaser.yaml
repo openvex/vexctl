@@ -1,4 +1,7 @@
-project_name: vex
+# Copyright 2023 The OpenVEX Authors
+# SPDX-License-Identifier: Apache-2.0
+
+project_name: vexctl
 
 env:
   - GO111MODULE=on
@@ -47,24 +50,34 @@ builds:
       - CGO_ENABLED=0
 
 signs:
-  # Keyless
-  - id: binary-keyless
+  - id: vexctl-keyless
     signature: "${artifact}.sig"
     certificate: "${artifact}.pem"
     cmd: cosign
     args: ["sign-blob", "--output-signature", "${artifact}.sig", "--output-certificate", "${artifact}.pem", "${artifact}"]
-    artifacts: binary
-  - id: checksum-keyless
-    signature: "${artifact}.sig"
-    certificate: "${artifact}.pem"
-    cmd: cosign
-    args: ["sign-blob", "--output-signature", "${artifact}.sig", "--output-certificate", "${artifact}.pem", "${artifact}"]
-    artifacts: checksum
+    artifacts: all
 
 archives:
   - format: binary
     name_template: "{{ .Binary }}"
     allow_different_binary_count: true
+
+sboms:
+  - id: vexctl
+    cmd: bom
+    args:
+      - generate
+      - "--output"
+      - "vexctl-bom.json.spdx"
+      - "-d"
+      - "../"
+      - "-c"
+      - "../.vexctl-bom-config.yaml"
+      - "--format"
+      - "json"
+    artifacts: any
+    documents:
+      - "vexctl-bom.json.spdx"
 
 checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
@@ -74,3 +87,6 @@ snapshot:
 
 release:
   prerelease: auto
+
+changelog:
+  use: github-native
