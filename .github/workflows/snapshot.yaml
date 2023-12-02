@@ -28,7 +28,7 @@ jobs:
           install-only: true
 
       - name: Install bom
-        uses: puerco/release-actions/setup-bom@dd08496c83441d6477114cc0555b96d404dacff7 # v0.1.2
+        uses: kubernetes-sigs/release-actions/setup-bom@dd08496c83441d6477114cc0555b96d404dacff7 # v0.1.2
 
       - name: Run Snapshot
         run: make snapshot

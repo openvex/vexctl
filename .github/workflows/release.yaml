@@ -33,7 +33,7 @@ jobs:
         uses: sigstore/cosign-installer@1fc5bd396d372bee37d608f955b336615edf79c8 # v3.2.0
 
       - name: Install bom
-        uses: puerco/release-actions/setup-bom@dd08496c83441d6477114cc0555b96d404dacff7 # v0.1.2
+        uses: kubernetes-sigs/release-actions/setup-bom@dd08496c83441d6477114cc0555b96d404dacff7 # v0.1.2
 
       - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
 
@@ -82,7 +82,7 @@ jobs:
         run: echo "tag_name=${GITHUB_REF#refs/*/}" >> "$GITHUB_OUTPUT"
 
       - name: Install tejolote
-        uses: puerco/release-actions/setup-tejolote@dd08496c83441d6477114cc0555b96d404dacff7 # v0.1.2
+        uses: kubernetes-sigs/release-actions/setup-tejolote@dd08496c83441d6477114cc0555b96d404dacff7 # v0.1.2
 
       - run: |
           tejolote attest --artifacts github://openvex/vexctl/${{ steps.tag.outputs.tag_name }} github://openvex/vexctl/"${GITHUB_RUN_ID}" --output vexctl.intoto.json --sign
