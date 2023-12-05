@@ -8,6 +8,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/release-utils/util"
@@ -133,16 +134,8 @@ to preserve the original file, specify it using the --file flag:
 			}
 
 			statement := opts.ToStatement()
-			if err := statement.Validate(); err != nil {
-				return fmt.Errorf("invalid statement: %w", err)
-			}
-
-			if doc.Timestamp != nil && doc.Timestamp.After(t) {
-				return fmt.Errorf("date cannot be older than document's timestamp")
-			}
-
-			if doc.LastUpdated != nil && doc.LastUpdated.After(t) {
-				return fmt.Errorf("new date cannot be before document last updated date")
+			if err := validateDocAndStatementForAdd(doc, &statement, t); err != nil {
+				return err
 			}
 
 			// Grab the last date to update missing dates in the statements.
@@ -190,4 +183,21 @@ to preserve the original file, specify it using the --file flag:
 
 	opts.AddFlags(addCmd)
 	parentCmd.AddCommand(addCmd)
+}
+
+func validateDocAndStatementForAdd(doc *vex.VEX, s *vex.Statement, t time.Time) error {
+	var upErr, oldErr, newErr error
+	if err := s.Validate(); err != nil {
+		upErr = fmt.Errorf("invalid statement: %w", err)
+	}
+
+	if doc.Timestamp != nil && doc.Timestamp.After(t) {
+		oldErr = fmt.Errorf("date cannot be older than document's timestamp")
+	}
+
+	if doc.LastUpdated != nil && doc.LastUpdated.After(t) {
+		newErr = fmt.Errorf("new date cannot be before document last updated date")
+	}
+
+	return errors.Join(upErr, oldErr, newErr)
 }
