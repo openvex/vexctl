@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/release-utils/util"
 
 	"github.com/openvex/go-vex/pkg/vex"
 )
@@ -22,14 +23,19 @@ type addOptions struct {
 }
 
 func (o *addOptions) Validate() error {
-	var fileError error
+	var fileError, docError error
 	if o.outFilePath != "" && o.inPlace {
 		fileError = fmt.Errorf("you cannot specify --in-place and an output file at the same time")
 	}
+
+	if o.documentPath != "" && !util.Exists(o.documentPath) {
+		docError = fmt.Errorf("the specified source document does not exist")
+	}
+
 	return errors.Join(
 		o.vexStatementOptions.Validate(),
 		o.outFileOption.Validate(),
-		fileError,
+		fileError, docError,
 	)
 }
 
@@ -42,7 +48,15 @@ func (o *addOptions) AddFlags(cmd *cobra.Command) {
 		"in-place",
 		"i",
 		false,
-		"add a statement to an existing file",
+		"overwrite changes on the original document (use --file to output to another path)",
+	)
+
+	cmd.PersistentFlags().StringVarP(
+		&o.documentPath,
+		"document",
+		"d",
+		"",
+		"path to the source document we'add statements to",
 	)
 }
 
@@ -54,20 +68,24 @@ func addAdd(parentCmd *cobra.Command) {
 
 The add subcommand lets users add new statements to an existing OpenVEX document.
 
-For example, this invocation will add a statement statung that CVE-2023-12345 is
-fixed:
+For example, this invocation will add a statement stating that CVE-2023-12345 is
+fixed in the git 2.39.0 apk package:
 
 %s add file.openvex.json "pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64" CVE-2023-12345 fixed
 
 When adding statements, the document version is increased by 1 and the last 
 updated date is set to now or, if the SOURCE_DATE_EPOCH environment variable
-is set, it will be read there (dates can be formatted in UNIX time or RFC3339).
+is set, it will be honored and used as the statement date (dates can be formatted
+in UNIX time or RFC3339).
 
 %s will output the file to STDOUT by default. Using the -i|--in-place flag will
-cause the specified document to be rewritten with the new version. You can also
-specify a new file using the --file flag.
+cause the specified document to be overwritten with the new version. If you want
+to preserve the original file, specify it using the --file flag:
 
-`, appname, appname, appname),
+%s add --file=newfile.openvex.json file.openvex.json \
+   "pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64" CVE-2023-12345 fixed
+
+`, appname, appname, appname, appname),
 		Use:               "add [flags] [document [product_id [vuln_id [status]]]]",
 		Example:           fmt.Sprintf("%s add file.openvex.json \"pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64\" CVE-2022-39260 fixed ", appname),
 		SilenceUsage:      false,
@@ -157,7 +175,13 @@ specify a new file using the --file flag.
 			doc.Statements = append(doc.Statements, statement)
 			doc.Version++
 
-			if err := writeDocument(doc, opts.outFilePath); err != nil {
+			// If we specified --in-place, write to the same file we read
+			fPath := opts.outFileOption.outFilePath
+			if opts.inPlace {
+				fPath = opts.documentPath
+			}
+
+			if err := writeDocument(doc, fPath); err != nil {
 				return fmt.Errorf("writing openvex document: %w", err)
 			}
 			return nil
