@@ -1,16 +1,22 @@
 {
-  "@context": "https://openvex.dev/ns",
-  "@id": "https://openvex.dev/docs/public/vex-3f59b4dffdeae0183e5e6a9d7a2461fdf86a03c079f4129050bb462eca366beb",
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-0f3be8817faafa24e4bfb3d17eaf619efb1fe54923b9c42c57b156a936b91431",
   "author": "John Doe",
   "role": "Senior Trusted VEX Issuer",
+  "version": 1,
   "statements": [
     {
-      "timestamp": "2022-12-22T16:36:43-05:00",
+      "vulnerability": {
+        "name": "CVE-1234-5678"
+      },
       "products": [
-        "pkg:apk/wolfi/bash@1.0.0"
+        {
+          "@id": "pkg:apk/wolfi/bash@1.0.0"
+        }
       ],
-      "vulnerability": "CVE-1234-5678",
-      "status": "under_investigation"
+      "status": "under_investigation",
+      "timestamp": "2023-12-05T05:04:34.77929922Z"
     }
-  ]
+  ],
+  "timestamp": "2023-12-05T05:04:34.77929844Z"
 }

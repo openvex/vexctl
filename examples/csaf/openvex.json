@@ -1,17 +1,22 @@
 {
-  "@context": "https://openvex.dev/ns",
-  "@id": "https://openvex.dev/docs/example/vex-9fb3463de1b57",
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-69c8fa4a8a04ef5aec7da2b02a5a3eb77ec7a18848387ed73160230fb4cdb713",
   "author": "Wolfi J Inkinson",
   "role": "Document Creator",
-  "timestamp": "2023-01-08T18:02:03.647787998-06:00",
-  "version": "1",
+  "version": 1,
   "statements": [
     {
-      "vulnerability": "CVE-2014-123456",
+      "vulnerability": {
+        "name": "CVE-2014-123456"
+      },
       "products": [
-        "pkg:generic/component2@2.39.0-r1"
+        {
+          "@id": "pkg:generic/component2@2.39.0-r1"
+        }
       ],
-      "status": "fixed"
+      "status": "fixed",
+      "timestamp": "2023-12-05T05:10:11.176427804Z"
     }
-  ]
+  ],
+  "timestamp": "2023-12-05T05:10:11.176427147Z"
 }
