@@ -1,16 +1,19 @@
 {
-  "@context": "https://openvex.dev/ns",
-  "@id": "https://openvex.dev/docs/example/vex-9fb3463de1b57",
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-d7653e1c3ccc092c02e2cfd2b12549be29264ff28f9f704f599613b007584dbe",
   "author": "Wolfi J Inkinson",
   "role": "Document Creator",
-  "timestamp": "2023-01-08T18:02:03.647787998-06:00",
-  "version": "1",
+  "timestamp": "2023-12-04T21:55:19.945014473-06:00",
+  "version": 1,
   "statements": [
     {
-      "vulnerability": "CVE-2014-123456",
+      "vulnerability": {
+        "name": "CVE-2014-123456"
+      },
+      "timestamp": "2023-12-04T21:55:19.945015302-06:00",
       "products": [
-        "pkg:apk/distro/git@2.39.0-r1?arch=armv7",
-        "pkg:apk/distro/git@2.39.0-r1?arch=x86_64"
+        { "@id": "pkg:apk/distro/git@2.39.0-r1?arch=armv7" },
+        { "@id": "pkg:apk/distro/git@2.39.0-r1?arch=x86_64" }
       ],
       "status": "fixed"
     }
