@@ -23,6 +23,7 @@ import (
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
@@ -185,7 +186,7 @@ func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attest
 		}
 
 		for _, ref := range refs {
-			if err := attachAttestation(ctx, payload, ref); err != nil {
+			if err := attachAttestation(ctx, att, payload, ref); err != nil {
 				return fmt.Errorf("attaching attestation to %s: %w", ref, err)
 			}
 		}
@@ -196,7 +197,7 @@ func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attest
 
 // attachAttestation is a utility function to do the actual attachment of
 // the signed attestation
-func attachAttestation(ctx context.Context, payload []byte, imageRef string) error {
+func attachAttestation(ctx context.Context, original *attestation.Attestation, payload []byte, imageRef string) error {
 	regOpts := options.RegistryOptions{}
 	remoteOpts, err := regOpts.ClientOpts(ctx)
 	if err != nil {
@@ -216,6 +217,22 @@ func attachAttestation(ctx context.Context, payload []byte, imageRef string) err
 	ref = digest //nolint:ineffassign
 
 	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
+
+	// Add the attestation certificate:
+	opts = append(opts, static.WithCertChain(original.SignatureData.CertData, original.SignatureData.Chain))
+
+	// Add the tlog entry to the annotations
+	if original.SignatureData.Entry != nil {
+		opts = append(opts, static.WithBundle(
+			cbundle.EntryToBundle(original.SignatureData.Entry),
+		))
+	}
+
+	// Add predicateType as manifest annotation
+	opts = append(opts, static.WithAnnotations(map[string]string{
+		"predicateType": vex.Context,
+	}))
+
 	att, err := static.NewAttestation(payload, opts...)
 	if err != nil {
 		return err
