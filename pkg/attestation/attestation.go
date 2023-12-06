@@ -64,12 +64,12 @@ func (att *Attestation) Sign() error {
 	ctx, ko := initSigning()
 
 	// Sign the attestaion.
-	if err := signAttestation(ctx, ko, att); err != nil {
+	if err := signAttestation(ctx, &ko, att); err != nil {
 		return fmt.Errorf("signing attestation: %w", err)
 	}
 
 	// Register the signature in rekor
-	if err := appendSignatureDataToTLog(ctx, ko, att); err != nil {
+	if err := appendSignatureDataToTLog(ctx, &ko, att); err != nil {
 		return fmt.Errorf("recording signature data to transparency log: %w", err)
 	}
 
@@ -136,13 +136,13 @@ func initSigning() (context.Context, options.KeyOpts) {
 // signAttestation creates a signer and signs the attestation. The attestation's
 // SignatureData field will be populated with the certificate, chain and the
 // attestaion data wrapped in its DSSE envelope.
-func signAttestation(ctx context.Context, ko options.KeyOpts, att *Attestation) error {
+func signAttestation(ctx context.Context, ko *options.KeyOpts, att *Attestation) error {
 	// TODO(puerco): Investigate supporting certificates preloaded in the
 	// attestation. We would need to dump them to disk and load them into
 	// the args here and if we're reusing the bundle, set it in ko.BundlePath
 	// Note that in this call we hardocde the pats empty, but we should get them
 	// from somewhere.
-	sv, err := sign.SignerFromKeyOpts(ctx, "", "", ko)
+	sv, err := sign.SignerFromKeyOpts(ctx, "", "", *ko)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}
@@ -180,7 +180,7 @@ func signAttestation(ctx context.Context, ko options.KeyOpts, att *Attestation) 
 // struct.
 // If uploading fails, the signature data will be destroyed to guarantee an atomic
 // operation of attesation.Sign()
-func appendSignatureDataToTLog(ctx context.Context, ko options.KeyOpts, att *Attestation) error {
+func appendSignatureDataToTLog(ctx context.Context, ko *options.KeyOpts, att *Attestation) error {
 	tlogClient, err := rekor.NewClient(ko.RekorURL)
 	if err != nil {
 		att.SignatureData = nil
