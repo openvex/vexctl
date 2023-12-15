@@ -7,6 +7,8 @@ package ctl
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
@@ -321,6 +323,93 @@ func TestMerge(t *testing.T) {
 			// Check doc
 			require.Len(t, doc.Statements, len(test.expectedDoc.Statements))
 			require.Equal(t, doc.Statements, test.expectedDoc.Statements)
+		})
+	}
+}
+
+func TestReadGoldenData(t *testing.T) {
+	sut := defaultVexCtlImplementation{}
+	for _, tc := range []struct {
+		name        string
+		opts        *GenerateOpts
+		products    []*vex.Product
+		expectedLen int
+		mustErr     bool
+	}{
+		{
+			name: "same identifier",
+			opts: &GenerateOpts{
+				TemplatesPath: "testdata/templates/",
+			},
+			products: []*vex.Product{
+				{Component: vex.Component{ID: "pkg:oci/vexctl"}},
+			},
+			expectedLen: 1,
+		},
+		{
+			name: "no matching purl",
+			opts: &GenerateOpts{
+				TemplatesPath: "testdata/templates/",
+			},
+			products: []*vex.Product{
+				{Component: vex.Component{ID: "pkg:oci/otherimage"}},
+			},
+			expectedLen: 0,
+		},
+		{
+			name: "versioned purl",
+			opts: &GenerateOpts{
+				TemplatesPath: "testdata/templates/",
+			},
+			products: []*vex.Product{
+				{Component: vex.Component{ID: "pkg:oci/vexctl@sha256%3Af87abf1735e79b70407288f665316644d414dbf7bdf38c2f1c8e3a541d304d84"}},
+			},
+			expectedLen: 1,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			doc, err := sut.ReadTemplateData(tc.opts, tc.products)
+			if tc.mustErr {
+				require.Error(t, err)
+				return
+			}
+			require.NotNil(t, doc)
+			require.Len(t, doc.Statements, tc.expectedLen, "unexpected number of statements")
+		})
+	}
+}
+
+func TestInitTemplatesDir(t *testing.T) {
+	sut := defaultVexCtlImplementation{}
+	for _, tc := range []struct {
+		name      string
+		prepare   func(string)
+		shouldErr bool
+	}{
+		{
+			name:      "normal",
+			prepare:   func(s string) {},
+			shouldErr: false,
+		},
+		{
+			name: "not clean dir",
+			prepare: func(s string) {
+				require.NoError(t, os.WriteFile(filepath.Join(s, "test.txt"), []byte("abc"), os.FileMode(0o644)))
+			},
+			shouldErr: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			tc.prepare(dir)
+			err := sut.InitTemplatesDir(dir)
+			if tc.shouldErr {
+				require.Error(t, err)
+				return
+			}
+			require.FileExists(t, filepath.Join(dir, "README.md"))
+			require.FileExists(t, filepath.Join(dir, "main.openvex.json"))
+			require.NoError(t, err)
 		})
 	}
 }

@@ -1,0 +1,22 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-4d0ddb41ceda9b98b3fb2d17c5a1b8e264a0c1aca03c726cf0486f7e602f65d2",
+  "author": "Unknown Author",
+  "timestamp": "2023-12-14T17:25:52.227708106-06:00",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2014-12345678"
+      },
+      "timestamp": "2023-12-14T17:25:52.227708816-06:00",
+      "products": [
+        {
+          "@id": "pkg:oci/vexctl"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present"
+    }
+  ]
+}
