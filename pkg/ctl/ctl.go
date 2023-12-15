@@ -233,3 +233,8 @@ func (vexctl *VexCtl) Generate(opts *GenerateOpts, products []*vex.Product) (*ve
 	// TODO(puerco): Normalize identifiers
 	return doc, nil
 }
+
+// InitTemplatesDirectory initializes a new templates directory
+func (vexctl *VexCtl) InitTemplatesDirectory(opts *GenerateOpts) error {
+	return vexctl.impl.InitTemplatesDir(opts.TemplatesPath)
+}

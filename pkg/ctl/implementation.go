@@ -38,7 +38,31 @@ import (
 	"github.com/openvex/vexctl/pkg/attestation"
 )
 
-const IntotoPayloadType = "application/vnd.in-toto+json"
+const (
+	IntotoPayloadType = "application/vnd.in-toto+json"
+
+	initReadmeMarkdown = "# OpenVEX Templates Directory\n\n" +
+		"This directory contains the OpenVEX data for this repository.\n" +
+		"The files stored in this directory are used as templates by\n" +
+		"`vexctl generate` when generating VEX data for a release or \n" +
+		"a specific artifact.\n\n" +
+		"To add new statements to publish data about a vulnerability,\n" +
+		"download [vexctl](https://github.com/openvex/vexctl)\n" +
+		"and append new statements using `vexctl add`. For example:\n" +
+		"```\n" +
+		"vexctl add --in-place main.openvex.json pkg:oci/test CVE-2014-1234567 fixed\n" +
+		"```\n" +
+		"That will add a new VEX statement expressing that the impact of\n" +
+		"CVE-2014-1234567 is under investigation in the test image. When\n" +
+		"cutting a new release, for `pkg:oci/test` the new file will be\n" +
+		"incorporated to the relase's VEX data.\n\n" +
+		"## Read more about OpenVEX\n\n" +
+		"To know more about generating, publishing and using VEX data\n" +
+		"in your project, please check out the vexctl repository and\n" +
+		"documentation: https://github.com/openvex/vexctl\n\n" +
+		"OpenVEX also has an examples repository with samples and docs:\n" +
+		"https://github.com/openvex/examples\n\n"
+)
 
 type Implementation interface {
 	ApplySingleVEX(*sarif.Report, *vex.VEX) (*sarif.Report, error)
@@ -55,6 +79,7 @@ type Implementation interface {
 	NormalizeProducts([]productRef) ([]productRef, []productRef, []productRef, error)
 	VerifyImageSubjects(*attestation.Attestation, *vex.VEX) error
 	ReadTemplateData(*GenerateOpts, []*vex.Product) (*vex.VEX, error)
+	InitTemplatesDir(string) error
 }
 
 type defaultVexCtlImplementation struct{}
@@ -662,4 +687,42 @@ func (impl *defaultVexCtlImplementation) ReadTemplateData(opts *GenerateOpts, pr
 	}
 
 	return document, nil
+}
+
+// InitTemplatesDir initializes the templates directory with an emptuy file and
+// a readme.
+func (impl *defaultVexCtlImplementation) InitTemplatesDir(path string) error {
+	if !util.Exists(path) {
+		if err := os.MkdirAll(path, os.FileMode(0o755)); err != nil {
+			return fmt.Errorf("creating templates dir: %s", err)
+		}
+	}
+
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return fmt.Errorf("reading templates dir: %w", err)
+	}
+
+	if len(entries) != 0 {
+		return fmt.Errorf("unable to initialize templates dir, path is not empty")
+	}
+
+	mainFile, err := os.Create(filepath.Join(path, "main.openvex.json"))
+	if err != nil {
+		return fmt.Errorf("creating initial openvex document: %w", err)
+	}
+	newDoc := vex.New()
+	newDoc.Metadata.Author = "vexctl (automated template)"
+	// TODO(puerco) This should be randomized
+	if _, err := newDoc.GenerateCanonicalID(); err != nil {
+		return fmt.Errorf("generating document ID: %w", err)
+	}
+	if err := newDoc.ToJSON(mainFile); err != nil {
+		return fmt.Errorf("writing initial openvex file to disk: %w", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(path, "README.md"), []byte(initReadmeMarkdown), os.FileMode(0o644)); err != nil {
+		return fmt.Errorf("writing OpenVEX template dir readme file: %w", err)
+	}
+	return nil
 }
