@@ -626,6 +626,9 @@ func (impl *defaultVexCtlImplementation) ReadTemplateData(opts *GenerateOpts, pr
 		}
 
 		for _, f := range entries {
+			if !strings.HasSuffix(f.Name(), "vex.json") {
+				continue
+			}
 			vexFiles = append(vexFiles, filepath.Join(goldenPath, f.Name()))
 		}
 	} else {
