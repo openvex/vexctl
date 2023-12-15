@@ -218,7 +218,7 @@ type GenerateOpts struct {
 	TemplatesPath string
 }
 
-const defaultTemplatesPath = ".openvex/templates"
+const DefaultTemplatesPath = ".openvex/templates"
 
 // Generate generates the upt to date vex data about an artifact from information
 // captured in golden VEX documents.

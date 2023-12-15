@@ -610,7 +610,7 @@ func (impl *defaultVexCtlImplementation) VerifyImageSubjects(
 func (impl *defaultVexCtlImplementation) ReadTemplateData(opts *GenerateOpts, products []*vex.Product) (*vex.VEX, error) {
 	goldenPath := opts.TemplatesPath
 	if goldenPath == "" {
-		goldenPath = defaultTemplatesPath
+		goldenPath = DefaultTemplatesPath
 	}
 
 	info, err := os.Stat(goldenPath)
@@ -630,6 +630,11 @@ func (impl *defaultVexCtlImplementation) ReadTemplateData(opts *GenerateOpts, pr
 		}
 	} else {
 		vexFiles = []string{goldenPath}
+	}
+
+	// If we have no files, then noop
+	if len(vexFiles) == 0 {
+		return nil, nil
 	}
 
 	// The VEX options only support matching products with a string.
