@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -52,6 +54,7 @@ type Implementation interface {
 	ListDocumentProducts(doc *vex.VEX) ([]productRef, error)
 	NormalizeProducts([]productRef) ([]productRef, []productRef, []productRef, error)
 	VerifyImageSubjects(*attestation.Attestation, *vex.VEX) error
+	ReadTemplateData(*GenerateOpts, []*vex.Product) (*vex.VEX, error)
 }
 
 type defaultVexCtlImplementation struct{}
@@ -600,4 +603,55 @@ func (impl *defaultVexCtlImplementation) VerifyImageSubjects(
 		}
 	}
 	return nil
+}
+
+// ReadTemplateData reads a set of golden documents with data used to generate
+// VEX information for a given artifact.
+func (impl *defaultVexCtlImplementation) ReadTemplateData(opts *GenerateOpts, products []*vex.Product) (*vex.VEX, error) {
+	goldenPath := opts.TemplatesPath
+	if goldenPath == "" {
+		goldenPath = defaultTemplatesPath
+	}
+
+	info, err := os.Stat(goldenPath)
+	if err != nil {
+		return nil, fmt.Errorf("checking filepath: %w", err)
+	}
+
+	vexFiles := []string{}
+	if info.IsDir() {
+		entries, err := os.ReadDir(goldenPath)
+		if err != nil {
+			return nil, fmt.Errorf("reading golden data directory: %w", err)
+		}
+
+		for _, f := range entries {
+			vexFiles = append(vexFiles, filepath.Join(goldenPath, f.Name()))
+		}
+	} else {
+		vexFiles = []string{goldenPath}
+	}
+
+	// The VEX options only support matching products with a string.
+	// We unpack all the product data and match on it
+	productsIdentifiers := []string{}
+	for _, p := range products {
+		productsIdentifiers = append(productsIdentifiers, p.ID)
+		for _, id := range p.Identifiers {
+			productsIdentifiers = append(productsIdentifiers, id)
+		}
+		for _, h := range p.Hashes {
+			productsIdentifiers = append(productsIdentifiers, string(h))
+		}
+	}
+
+	// Generate the full VEX history
+	document, err := vex.MergeFilesWithOptions(&vex.MergeOptions{
+		Products: productsIdentifiers,
+	}, vexFiles)
+	if err != nil {
+		return nil, fmt.Errorf("merging golden data: %w", err)
+	}
+
+	return document, nil
 }

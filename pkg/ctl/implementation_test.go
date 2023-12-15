@@ -324,3 +324,55 @@ func TestMerge(t *testing.T) {
 		})
 	}
 }
+
+func TestReadGoldenData(t *testing.T) {
+	sut := defaultVexCtlImplementation{}
+	for _, tc := range []struct {
+		name        string
+		opts        *GenerateOpts
+		products    []*vex.Product
+		expectedLen int
+		mustErr     bool
+	}{
+		{
+			name: "same identifier",
+			opts: &GenerateOpts{
+				TemplatesPath: "testdata/templates/",
+			},
+			products: []*vex.Product{
+				{Component: vex.Component{ID: "pkg:oci/vexctl"}},
+			},
+			expectedLen: 1,
+		},
+		{
+			name: "no matching purl",
+			opts: &GenerateOpts{
+				TemplatesPath: "testdata/templates/",
+			},
+			products: []*vex.Product{
+				{Component: vex.Component{ID: "pkg:oci/otherimage"}},
+			},
+			expectedLen: 0,
+		},
+		{
+			name: "versioned purl",
+			opts: &GenerateOpts{
+				TemplatesPath: "testdata/templates/",
+			},
+			products: []*vex.Product{
+				{Component: vex.Component{ID: "pkg:oci/vexctl@sha256%3Af87abf1735e79b70407288f665316644d414dbf7bdf38c2f1c8e3a541d304d84"}},
+			},
+			expectedLen: 1,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			doc, err := sut.ReadTemplateData(tc.opts, tc.products)
+			if tc.mustErr {
+				require.Error(t, err)
+				return
+			}
+			require.NotNil(t, doc)
+			require.Len(t, doc.Statements, tc.expectedLen, "unexpected number of statements")
+		})
+	}
+}
