@@ -7,6 +7,8 @@ package ctl
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
@@ -373,6 +375,41 @@ func TestReadGoldenData(t *testing.T) {
 			}
 			require.NotNil(t, doc)
 			require.Len(t, doc.Statements, tc.expectedLen, "unexpected number of statements")
+		})
+	}
+}
+
+func TestInitTemplatesDir(t *testing.T) {
+	sut := defaultVexCtlImplementation{}
+	for _, tc := range []struct {
+		name      string
+		prepare   func(string)
+		shouldErr bool
+	}{
+		{
+			name:      "normal",
+			prepare:   func(s string) {},
+			shouldErr: false,
+		},
+		{
+			name: "not clean dir",
+			prepare: func(s string) {
+				require.NoError(t, os.WriteFile(filepath.Join(s, "test.txt"), []byte("abc"), os.FileMode(0o644)))
+			},
+			shouldErr: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			tc.prepare(dir)
+			err := sut.InitTemplatesDir(dir)
+			if tc.shouldErr {
+				require.Error(t, err)
+				return
+			}
+			require.FileExists(t, filepath.Join(dir, "README.md"))
+			require.FileExists(t, filepath.Join(dir, "main.openvex.json"))
+			require.NoError(t, err)
 		})
 	}
 }
