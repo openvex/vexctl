@@ -211,3 +211,25 @@ func (vexctl *VexCtl) MergeFiles(ctx context.Context, opts *MergeOptions, filePa
 	}
 	return doc, nil
 }
+
+type GenerateOpts struct {
+	// TemplatesPath is a file or directory containing the OpenVEX files to be
+	// used as templates to generate the data.
+	TemplatesPath string
+}
+
+const defaultTemplatesPath = ".openvex/templates"
+
+// Generate generates the upt to date vex data about an artifact from information
+// captured in golden VEX documents.
+func (vexctl *VexCtl) Generate(opts *GenerateOpts, products []*vex.Product) (*vex.VEX, error) {
+	// Read the golden data files. This returns a vex document with all
+	// statements applicable to the products
+	doc, err := vexctl.impl.ReadTemplateData(opts, products)
+	if err != nil {
+		return nil, fmt.Errorf("reading template data: %w", err)
+	}
+
+	// TODO(puerco): Normalize identifiers
+	return doc, nil
+}
