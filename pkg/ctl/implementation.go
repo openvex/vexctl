@@ -44,24 +44,24 @@ const (
 	initReadmeMarkdown = "# OpenVEX Templates Directory\n\n" +
 		"This directory contains the OpenVEX data for this repository.\n" +
 		"The files stored in this directory are used as templates by\n" +
-		"`vexctl generate` when generating VEX data for a release or \n" +
+		"`vexctl generate` when generating VEX data for a release or\n" +
 		"a specific artifact.\n\n" +
 		"To add new statements to publish data about a vulnerability,\n" +
 		"download [vexctl](https://github.com/openvex/vexctl)\n" +
-		"and append new statements using `vexctl add`. For example:\n" +
+		"and append new statements using `vexctl add`. For example:\n\n" +
 		"```\n" +
 		"vexctl add --in-place main.openvex.json pkg:oci/test CVE-2014-1234567 fixed\n" +
-		"```\n" +
+		"```\n\n" +
 		"That will add a new VEX statement expressing that the impact of\n" +
 		"CVE-2014-1234567 is under investigation in the test image. When\n" +
 		"cutting a new release, for `pkg:oci/test` the new file will be\n" +
 		"incorporated to the relase's VEX data.\n\n" +
 		"## Read more about OpenVEX\n\n" +
 		"To know more about generating, publishing and using VEX data\n" +
-		"in your project, please check out the vexctl repository and\n" +
-		"documentation: https://github.com/openvex/vexctl\n\n" +
-		"OpenVEX also has an examples repository with samples and docs:\n" +
-		"https://github.com/openvex/examples\n\n"
+		"in your project, please check out the [vexctl repository and\n" +
+		"documentation](https://github.com/openvex/vexctl).\n\n" +
+		"OpenVEX also has an [examples repository](https://github.com/openvex/examples)\n" +
+		"with samples and docs.\n"
 )
 
 type Implementation interface {
