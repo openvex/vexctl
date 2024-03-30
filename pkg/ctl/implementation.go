@@ -538,8 +538,9 @@ func (impl *defaultVexCtlImplementation) NormalizeProducts(subjects []productRef
 		if pref.Hashes == nil {
 			pref.Hashes = make(map[vex.Algorithm]vex.Hash)
 		}
-		if strings.HasPrefix(pref.Name, "pkg:oci/") ||
-			strings.HasPrefix(pref.Name, "pkg:/oci/") { // Some buggy tools add this wrong slash
+		switch {
+		case strings.HasPrefix(pref.Name, "pkg:/oci/"),
+			strings.HasPrefix(pref.Name, "pkg:oci/"):
 			// Deduct image purls to the reference as much as possible
 			p, err := purl.FromString(pref.Name)
 			if err != nil {
@@ -577,7 +578,7 @@ func (impl *defaultVexCtlImplementation) NormalizeProducts(subjects []productRef
 			pref.Name = ref
 			logrus.Debugf("%s is a purl for %s", pref.Name, ref)
 			imageRefs = append(imageRefs, pref)
-		} else if strings.HasPrefix(pref.Name, "pkg:") {
+		case strings.HasPrefix(pref.Name, "pkg:"):
 			// When there are other purls, we only attest them as subjects if
 			// the product reference has hashes
 			if pref.Hashes != nil && len(pref.Hashes) > 0 {
@@ -585,7 +586,7 @@ func (impl *defaultVexCtlImplementation) NormalizeProducts(subjects []productRef
 			} else {
 				unattestableRefs = append(unattestableRefs, pref)
 			}
-		} else {
+		default:
 			// If not,try to parse the string as an image reference. If they can
 			// be parsed as image references but they cannot be looked up, attestting
 			// will fail trying to fetch their digests.

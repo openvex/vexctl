@@ -388,7 +388,7 @@ func TestInitTemplatesDir(t *testing.T) {
 	}{
 		{
 			name:      "normal",
-			prepare:   func(s string) {},
+			prepare:   func(_ string) {},
 			shouldErr: false,
 		},
 		{

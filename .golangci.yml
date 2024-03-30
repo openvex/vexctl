@@ -1,7 +1,9 @@
+# Copyright 2023 The OpenVEX Authors
+# SPDX-License-Identifier: Apache-2.0
+
 ---
 run:
   concurrency: 6
-  deadline: 5m
 issues:
   exclude-rules:
     # counterfeiter fakes are usually named 'fake_<something>.go'
@@ -98,22 +100,8 @@ linters-settings:
   gocritic:
     enabled-checks:
       # Diagnostic
-      - appendAssign
-      - argOrder
-      - badCond
-      - caseOrder
-      - codegenComment
       - commentedOutCode
-      - deprecatedComment
-      - dupArg
-      - dupBranchBody
-      - dupCase
-      - dupSubExpr
-      - exitAfterDefer
-      - flagDeref
-      - flagName
       - nilValReturn
-      - offBy1
       - sloppyReassign
       - weakCond
       - octalLiteral
@@ -127,31 +115,16 @@ linters-settings:
       - rangeValCopy
 
       # Style
-      - assignOp
       - boolExprSimplify
-      - captLocal
-      - commentFormatting
       - commentedOutImport
-      - defaultCaseOrder
       - docStub
-      - elseif
       - emptyFallthrough
       - emptyStringTest
       - hexLiteral
       - methodExprCall
-      - regexpMust
-      - singleCaseSwitch
-      - sloppyLen
       - stringXbytes
-      - switchTrue
       - typeAssertChain
-      - typeSwitchVar
-      - underef
       - unlabelStmt
-      - unlambda
-      - unslice
-      - valSwap
-      - wrapperFunc
       - yodaStyleExpr
       # - ifElseChain
 

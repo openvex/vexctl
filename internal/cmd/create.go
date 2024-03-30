@@ -82,7 +82,7 @@ Examples:
 		SilenceUsage:      false,
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			// If we have arguments, add them
 			for i := range args {
 				switch i {

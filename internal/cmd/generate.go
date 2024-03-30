@@ -151,7 +151,7 @@ using its canonicalization hash.
 		SilenceUsage:      false,
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				if opts.Product != "" && opts.Product != args[0] {
 					return errors.New("product can only be specified once")
