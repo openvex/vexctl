@@ -8,9 +8,18 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
+    groups:
+      all:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: gomod
     directory: "/"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
+    groups:
+      all:
+        update-types:
+          - "patch"

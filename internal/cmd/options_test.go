@@ -131,7 +131,7 @@ func TestAddOptionsValidate(t *testing.T) {
 	}{
 		{
 			name:    "no-error",
-			prepare: func(ao *addOptions) {},
+			prepare: func(_ *addOptions) {},
 			sut: &addOptions{
 				vexStatementOptions: stubOpts,
 				documentPath:        filepath.Join(d, "openvex.test"),
@@ -141,7 +141,7 @@ func TestAddOptionsValidate(t *testing.T) {
 		},
 		{
 			name:    "inplace-and-outfile",
-			prepare: func(ao *addOptions) {},
+			prepare: func(_ *addOptions) {},
 			sut: &addOptions{
 				vexStatementOptions: stubOpts,
 				outFileOption: outFileOption{

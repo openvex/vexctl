@@ -62,7 +62,7 @@ Examples:
 		SilenceUsage:      false,
 		SilenceErrors:     false,
 		PersistentPreRunE: initLogging,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			vexctl := ctl.New()
 
 			// TODO(puerco): Change this to vex merge options when we move
