@@ -86,6 +86,8 @@ jobs:
 
       - run: |
           tejolote attest --artifacts github://openvex/vexctl/${{ steps.tag.outputs.tag_name }} github://openvex/vexctl/"${GITHUB_RUN_ID}" --output vexctl.intoto.json --sign
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Release
         uses: softprops/action-gh-release@9d7c94cfd0a1f3ed45544c887983e9fa900f0564 # v2.0.4
