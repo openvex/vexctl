@@ -13,7 +13,7 @@ require (
 	github.com/sigstore/sigstore v1.8.3
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
-	sigs.k8s.io/release-utils v0.7.7
+	sigs.k8s.io/release-utils v0.8.0
 )
 
 require (
