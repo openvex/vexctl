@@ -122,7 +122,7 @@ func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, ve
 					newResults = append(newResults, res)
 					continue
 				}
-			case "GHSA", "PRISMA", "RHSA", "RUSTSEC", "SNYK":
+			case "GHSA", "GO", "PRISMA", "RHSA", "RUSTSEC", "SNYK":
 				id = strings.TrimSpace(*res.RuleID)
 			default:
 				newResults = append(newResults, res)
