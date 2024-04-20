@@ -53,6 +53,8 @@ func init() {
 	addAttest(rootCmd)
 	addMerge(rootCmd)
 	addCreate(rootCmd)
+	addCommit(rootCmd)
+	addRelease(rootCmd)
 	addList(rootCmd)
 	addAdd(rootCmd)
 	addGenerate(rootCmd)
