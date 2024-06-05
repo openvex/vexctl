@@ -19,6 +19,11 @@ If you have Go 1.16 or later installed, you can run the following to install `ve
 go install github.com/openvex/vexctl@latest
 ```
 
+If you use Homebrew, you can install the latest tagged version of `vexctl` using:
+```console
+brew install vexctl
+```
+
 ## Operational Model
 
 To achieve its mission, `vexctl` has three main modes of operation:
