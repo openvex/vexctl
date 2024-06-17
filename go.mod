@@ -3,7 +3,7 @@ module github.com/openvex/vexctl
 go 1.22
 
 require (
-	github.com/google/go-containerregistry v0.19.1
+	github.com/google/go-containerregistry v0.19.2
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/openvex/go-vex v0.2.5
 	github.com/owenrumney/go-sarif v1.1.1
@@ -12,7 +12,7 @@ require (
 	github.com/sigstore/rekor v1.3.6
 	github.com/sigstore/sigstore v1.8.4
 	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	sigs.k8s.io/release-utils v0.8.2
 )
 
