@@ -102,10 +102,10 @@ to preserve the original file, specify it using the --file flag:
 					}
 					opts.documentPath = args[i]
 				case 1:
-					if opts.Product != "" && opts.Product != args[i] {
+					if len(opts.Products) != 1 && len(args) != 1 {
 						return errors.New("product can only be specified once")
 					}
-					opts.Product = args[i]
+					opts.Products = append(opts.Products, args[i])
 				case 2:
 					if opts.Vulnerability != "" && opts.Vulnerability != args[i] {
 						return errors.New("vulnerability can only be specified once")

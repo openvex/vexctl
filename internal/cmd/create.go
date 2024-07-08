@@ -87,10 +87,14 @@ Examples:
 			for i := range args {
 				switch i {
 				case 0:
-					if opts.Product != "" && opts.Product != args[i] {
-						return errors.New("product can only be specified once")
+					if len(opts.Products) > 0 && args[i] != "" {
+						return errors.New("multiple products can only be specified using the --product flag")
 					}
-					opts.Product = args[i]
+					// Specifying multiple products through args is not supported as we can't tell how many products are provided:
+					// e.g the second argument could be a vulnerability or a status instead of a product, for example.
+					// When using args only the first one is considered a product.
+					// To specify multiple products, use the --product flag multiple times instead.
+					opts.Products = append(opts.Products, args[i])
 				case 1:
 					if opts.Vulnerability != "" && opts.Vulnerability != args[i] {
 						return errors.New("vulnerability can only be specified once")

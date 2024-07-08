@@ -54,35 +54,35 @@ func TestVexStatementOptionsValidate(t *testing.T) {
 		},
 		"empty product": {
 			vexStatementOptions{
-				Status:  string(vex.StatusUnderInvestigation),
-				Product: "",
+				Status:   string(vex.StatusUnderInvestigation),
+				Products: []string{},
 			}, true,
 		},
 		"empty vulnerability": {
 			vexStatementOptions{
 				Status:        string(vex.StatusUnderInvestigation),
-				Product:       "pkg:golang/fmt",
+				Products:      []string{"pkg:golang/fmt"},
 				Vulnerability: "",
 			}, true,
 		},
 		"empty status": {
 			vexStatementOptions{
 				Status:        "",
-				Product:       "pkg:golang/fmt",
+				Products:      []string{"pkg:golang/fmt"},
 				Vulnerability: "CVE-2014-12345678",
 			}, true,
 		},
 		"invalid status": {
 			vexStatementOptions{
 				Status:        "cheese",
-				Product:       "pkg:golang/fmt",
+				Products:      []string{"pkg:golang/fmt"},
 				Vulnerability: "CVE-2014-12345678",
 			}, true,
 		},
 		"justification on non-not-affected": {
 			vexStatementOptions{
 				Status:        string(vex.StatusUnderInvestigation),
-				Product:       "pkg:golang/fmt",
+				Products:      []string{"pkg:golang/fmt"},
 				Vulnerability: "CVE-2014-12345678",
 				Justification: "justification goes here",
 			}, true,
@@ -90,7 +90,7 @@ func TestVexStatementOptionsValidate(t *testing.T) {
 		"impact statement on non-not-affected": {
 			vexStatementOptions{
 				Status:          string(vex.StatusUnderInvestigation),
-				Product:         "pkg:golang/fmt",
+				Products:        []string{"pkg:golang/fmt"},
 				Vulnerability:   "CVE-2014-12345678",
 				ImpactStatement: "buffer underrun is never run under",
 			}, true,
@@ -98,7 +98,7 @@ func TestVexStatementOptionsValidate(t *testing.T) {
 		"ok": {
 			vexStatementOptions{
 				Status:        string(vex.StatusUnderInvestigation),
-				Product:       "pkg:golang/fmt",
+				Products:      []string{"pkg:golang/fmt"},
 				Vulnerability: "CVE-2014-12345678",
 			}, false,
 		},
@@ -114,7 +114,7 @@ func TestAddOptionsValidate(t *testing.T) {
 	stubOpts := vexStatementOptions{
 		Status:        "fixed",
 		Vulnerability: "CVE-2014-1234678",
-		Product:       "pkg:generic/test@1.00",
+		Products:      []string{"pkg:generic/test@1.00"},
 	}
 
 	// create a test directory and a file in it

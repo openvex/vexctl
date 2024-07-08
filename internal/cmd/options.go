@@ -65,7 +65,7 @@ type vexStatementOptions struct {
 	ImpactStatement string
 	Vulnerability   string
 	ActionStatement string
-	Product         string
+	Products        []string
 	Subcomponents   []string
 }
 
@@ -80,8 +80,8 @@ func (so *vexStatementOptions) Validate() error {
 		so.ActionStatement = ""
 	}
 
-	if so.Product == "" {
-		return errors.New("a required product id is needed to generate a valid VEX statement")
+	if len(so.Products) == 0 {
+		return errors.New("a minimum of one product id is needed to generate a valid VEX statement")
 	}
 
 	if so.Vulnerability == "" {
@@ -115,12 +115,12 @@ func (so *vexStatementOptions) AddFlags(cmd *cobra.Command) {
 		"vulnerability to add to the statement (eg CVE-2023-12345)",
 	)
 
-	cmd.PersistentFlags().StringVarP(
-		&so.Product,
+	cmd.PersistentFlags().StringSliceVarP(
+		&so.Products,
 		productLongFlag,
 		"p",
-		"",
-		"main identifier of the product, a package URL or another IRI",
+		[]string{},
+		"list of products to list in the statement, at least one is required (main identifier of the product, a package URL or another IRI)",
 	)
 
 	cmd.PersistentFlags().StringVarP(
@@ -177,16 +177,8 @@ func (so *vexStatementOptions) ToStatement() vex.Statement {
 		Vulnerability: vex.Vulnerability{
 			Name: vex.VulnerabilityID(so.Vulnerability),
 		},
-		Timestamp:   &t,
-		LastUpdated: nil,
-		Products: []vex.Product{
-			{
-				Component: vex.Component{
-					ID: so.Product,
-				},
-				Subcomponents: []vex.Subcomponent{},
-			},
-		},
+		Timestamp:                &t,
+		LastUpdated:              nil,
 		Status:                   vex.Status(so.Status),
 		StatusNotes:              so.StatusNotes,
 		Justification:            vex.Justification(so.Justification),
@@ -197,6 +189,15 @@ func (so *vexStatementOptions) ToStatement() vex.Statement {
 
 	if so.ActionStatement != "" {
 		s.ActionStatementTimestamp = &t
+	}
+
+	for _, id := range so.Products {
+		s.Products = append(s.Products, vex.Product{
+			Component: vex.Component{
+				ID: id,
+			},
+			Subcomponents: []vex.Subcomponent{},
+		})
 	}
 
 	for _, sc := range so.Subcomponents {
