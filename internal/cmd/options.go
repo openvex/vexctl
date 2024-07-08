@@ -84,6 +84,10 @@ func (so *vexStatementOptions) Validate() error {
 		return errors.New("a minimum of one product id is needed to generate a valid VEX statement")
 	}
 
+	if len(so.Products) > 1 && len(so.Subcomponents) > 0 {
+		return errors.New("subcomponent(s) cannot be defined when specifying multiple products because it's unclear which subcomponent(s) belong to which products")
+	}
+
 	if so.Vulnerability == "" {
 		return errors.New("a vulnerability ID is required to generate a valid VEX statement")
 	}
