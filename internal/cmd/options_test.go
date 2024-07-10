@@ -54,35 +54,35 @@ func TestVexStatementOptionsValidate(t *testing.T) {
 		},
 		"empty product": {
 			vexStatementOptions{
-				Status:  string(vex.StatusUnderInvestigation),
-				Product: "",
+				Status:   string(vex.StatusUnderInvestigation),
+				Products: []string{},
 			}, true,
 		},
 		"empty vulnerability": {
 			vexStatementOptions{
 				Status:        string(vex.StatusUnderInvestigation),
-				Product:       "pkg:golang/fmt",
+				Products:      []string{"pkg:golang/fmt"},
 				Vulnerability: "",
 			}, true,
 		},
 		"empty status": {
 			vexStatementOptions{
 				Status:        "",
-				Product:       "pkg:golang/fmt",
+				Products:      []string{"pkg:golang/fmt"},
 				Vulnerability: "CVE-2014-12345678",
 			}, true,
 		},
 		"invalid status": {
 			vexStatementOptions{
 				Status:        "cheese",
-				Product:       "pkg:golang/fmt",
+				Products:      []string{"pkg:golang/fmt"},
 				Vulnerability: "CVE-2014-12345678",
 			}, true,
 		},
 		"justification on non-not-affected": {
 			vexStatementOptions{
 				Status:        string(vex.StatusUnderInvestigation),
-				Product:       "pkg:golang/fmt",
+				Products:      []string{"pkg:golang/fmt"},
 				Vulnerability: "CVE-2014-12345678",
 				Justification: "justification goes here",
 			}, true,
@@ -90,15 +90,23 @@ func TestVexStatementOptionsValidate(t *testing.T) {
 		"impact statement on non-not-affected": {
 			vexStatementOptions{
 				Status:          string(vex.StatusUnderInvestigation),
-				Product:         "pkg:golang/fmt",
+				Products:        []string{"pkg:golang/fmt"},
 				Vulnerability:   "CVE-2014-12345678",
 				ImpactStatement: "buffer underrun is never run under",
+			}, true,
+		},
+		"can't associate a subcomponent when multiple products are defined": {
+			vexStatementOptions{
+				Status:        string(vex.StatusNotAffected),
+				Products:      []string{"pkg:oci/alpine@sha256:124c7d2707904eea7431fffe91522a01e5a861a624ee31d03372cc1d138a3126", "pkg:oci/busybox@sha256:c6ab5a1a2bc330f3f9616b20c7fba7716cadd941514cf80f8d7c3da8af6b0946"},
+				Subcomponents: []string{"pkg:golang/fmt"},
+				Vulnerability: "CVE-2014-12345678",
 			}, true,
 		},
 		"ok": {
 			vexStatementOptions{
 				Status:        string(vex.StatusUnderInvestigation),
-				Product:       "pkg:golang/fmt",
+				Products:      []string{"pkg:golang/fmt"},
 				Vulnerability: "CVE-2014-12345678",
 			}, false,
 		},
@@ -114,7 +122,7 @@ func TestAddOptionsValidate(t *testing.T) {
 	stubOpts := vexStatementOptions{
 		Status:        "fixed",
 		Vulnerability: "CVE-2014-1234678",
-		Product:       "pkg:generic/test@1.00",
+		Products:      []string{"pkg:generic/test@1.00"},
 	}
 
 	// create a test directory and a file in it
