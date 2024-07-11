@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -64,6 +65,7 @@ type vexStatementOptions struct {
 	Justification   string
 	ImpactStatement string
 	Vulnerability   string
+	Aliases         []string
 	ActionStatement string
 	Products        []string
 	Subcomponents   []string
@@ -107,6 +109,22 @@ func (so *vexStatementOptions) Validate() error {
 		return fmt.Errorf("--impact-statement can be set only when status is \"not_affected\" (status was %q)", so.Status)
 	}
 
+	if len(so.Aliases) > 0 {
+		previousLen := len(so.Aliases)
+		slices.Sort(so.Aliases)
+		so.Aliases = slices.Compact(so.Aliases)
+
+		if previousLen != len(so.Aliases) {
+			return errors.New("repeated aliases found")
+		}
+
+		for _, sa := range so.Aliases {
+			if sa == so.Vulnerability {
+				return errors.New("an alias cannot be the same as the vulnerability ID")
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -117,6 +135,13 @@ func (so *vexStatementOptions) AddFlags(cmd *cobra.Command) {
 		"v",
 		"",
 		"vulnerability to add to the statement (eg CVE-2023-12345)",
+	)
+
+	cmd.PersistentFlags().StringSliceVar(
+		&so.Aliases,
+		"aliases",
+		[]string{},
+		"list of aliases under which the vulnerability may be known (eg GO-2023-12345, GHSA-a1a1-b2b2-c3c3)",
 	)
 
 	cmd.PersistentFlags().StringSliceVarP(
@@ -179,7 +204,8 @@ func (so *vexStatementOptions) ToStatement() vex.Statement {
 
 	s := vex.Statement{
 		Vulnerability: vex.Vulnerability{
-			Name: vex.VulnerabilityID(so.Vulnerability),
+			Name:    vex.VulnerabilityID(so.Vulnerability),
+			Aliases: []vex.VulnerabilityID{},
 		},
 		Timestamp:                &t,
 		LastUpdated:              nil,
@@ -202,6 +228,10 @@ func (so *vexStatementOptions) ToStatement() vex.Statement {
 			},
 			Subcomponents: []vex.Subcomponent{},
 		})
+	}
+
+	for _, sa := range so.Aliases {
+		s.Vulnerability.Aliases = append(s.Vulnerability.Aliases, vex.VulnerabilityID(sa))
 	}
 
 	for _, sc := range so.Subcomponents {
