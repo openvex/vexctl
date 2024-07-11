@@ -47,21 +47,22 @@ const (
 		"`vexctl generate` when generating VEX data for a release or\n" +
 		"a specific artifact.\n\n" +
 		"To add new statements to publish data about a vulnerability,\n" +
-		"download [vexctl](https://github.com/openvex/vexctl)\n" +
-		"and append new statements using `vexctl add`. For example:\n\n" +
+		"download [vexctl] and append new statements using\n" +
+		"`vexctl add`. For example:\n\n" +
 		"```\n" +
-		"vexctl add --in-place main.openvex.json pkg:oci/test CVE-2014-1234567 fixed\n" +
+		"vexctl add --in-place main.openvex.json --product pkg:oci/test --vuln CVE-2014-1234567 --status under_investigation\n" +
 		"```\n\n" +
 		"That will add a new VEX statement expressing that the impact of\n" +
 		"CVE-2014-1234567 is under investigation in the test image. When\n" +
-		"cutting a new release, for `pkg:oci/test` the new file will be\n" +
-		"incorporated to the relase's VEX data.\n\n" +
+		"cutting a new release, for `pkg:oci/test` the new file can be\n" +
+		"incorporated to the release's VEX data.\n\n" +
 		"## Read more about OpenVEX\n\n" +
 		"To know more about generating, publishing and using VEX data\n" +
 		"in your project, please check out the [vexctl repository and\n" +
-		"documentation](https://github.com/openvex/vexctl).\n\n" +
-		"OpenVEX also has an [examples repository](https://github.com/openvex/examples)\n" +
-		"with samples and docs.\n"
+		"documentation][vexctl].\n\n" +
+		"OpenVEX also has an [examples repository] with samples and docs.\n\n\n" +
+		"[vexctl]: https://github.com/openvex/vexctl\n" +
+		"[examples repository]: https://github.com/openvex/examples\n"
 )
 
 type Implementation interface {
