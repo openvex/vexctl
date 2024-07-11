@@ -103,6 +103,22 @@ func TestVexStatementOptionsValidate(t *testing.T) {
 				Vulnerability: "CVE-2014-12345678",
 			}, true,
 		},
+		"repeated aliases found": {
+			vexStatementOptions{
+				Status:        string(vex.StatusUnderInvestigation),
+				Products:      []string{"pkg:golang/fmt"},
+				Vulnerability: "CVE-2014-12345678",
+				Aliases:       []string{"CVE-2014-1234", "CVE-2014-1234"},
+			}, true,
+		},
+		"repeated alias and vulnerability ID": {
+			vexStatementOptions{
+				Status:        string(vex.StatusUnderInvestigation),
+				Products:      []string{"pkg:golang/fmt"},
+				Vulnerability: "CVE-2014-12345678",
+				Aliases:       []string{"CVE-2014-1234", "CVE-2014-12345678"},
+			}, true,
+		},
 		"ok": {
 			vexStatementOptions{
 				Status:        string(vex.StatusUnderInvestigation),
