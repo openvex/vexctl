@@ -1,6 +1,6 @@
 module github.com/openvex/vexctl
 
-go 1.22.4
+go 1.22.5
 
 require (
 	github.com/google/go-containerregistry v0.20.1
