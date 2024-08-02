@@ -551,7 +551,7 @@ func (impl *defaultVexCtlImplementation) NormalizeProducts(subjects []productRef
 			ref := ""
 			qs := p.Qualifiers.Map()
 			if r, ok := qs["repository_url"]; ok {
-				ref = r
+				ref = strings.TrimSuffix(r, "/")
 			} else {
 				// digest or image
 				ref = p.Name
