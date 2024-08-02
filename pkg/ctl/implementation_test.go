@@ -54,7 +54,7 @@ func TestNormalizeProducts(t *testing.T) {
 		},
 		{
 			name:                 "purl, custom registry",
-			products:             []productRef{{Name: "pkg:oci/kube-apiserver?repository_url=registry.k8s.io/kube-apiserver&tag=v1.26.0"}},
+			products:             []productRef{{Name: "pkg:oci/kube-apiserver?repository_url=registry.k8s.io/kube-apiserver/&tag=v1.26.0"}},
 			expectedImage:        []productRef{{Name: "registry.k8s.io/kube-apiserver:v1.26.0", Hashes: make(map[vex.Algorithm]vex.Hash)}},
 			expectedOther:        []productRef{},
 			expectedUnattestable: []productRef{},
