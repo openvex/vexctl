@@ -54,7 +54,7 @@ func TestNormalizeProducts(t *testing.T) {
 		},
 		{
 			name:                 "purl, custom registry",
-			products:             []productRef{{Name: "pkg:oci/kube-apiserver?repository_url=registry.k8s.io&tag=v1.26.0"}},
+			products:             []productRef{{Name: "pkg:oci/kube-apiserver?repository_url=registry.k8s.io/kube-apiserver&tag=v1.26.0"}},
 			expectedImage:        []productRef{{Name: "registry.k8s.io/kube-apiserver:v1.26.0", Hashes: make(map[vex.Algorithm]vex.Hash)}},
 			expectedOther:        []productRef{},
 			expectedUnattestable: []productRef{},
@@ -200,7 +200,7 @@ func TestVerifyImageSubjects(t *testing.T) {
 			[]intoto.Subject{
 				{Name: "ghcr.io/test/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99"},
 			},
-			[]string{"pkg:oci/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99?repository_url=ghcr.io/test"},
+			[]string{"pkg:oci/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99?repository_url=ghcr.io/test/image"},
 			false,
 		},
 	} {
