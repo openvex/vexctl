@@ -582,7 +582,7 @@ func (impl *defaultVexCtlImplementation) NormalizeProducts(subjects []productRef
 		case strings.HasPrefix(pref.Name, "pkg:"):
 			// When there are other purls, we only attest them as subjects if
 			// the product reference has hashes
-			if pref.Hashes != nil && len(pref.Hashes) > 0 {
+			if pref.Hashes != nil && len(pref.Hashes) > 0 { //nolint: gosimple
 				otherRefs = append(otherRefs, pref)
 			} else {
 				unattestableRefs = append(unattestableRefs, pref)
