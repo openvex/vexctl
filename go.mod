@@ -12,7 +12,7 @@ require (
 	github.com/sigstore/rekor v1.3.9
 	github.com/sigstore/sigstore v1.8.14
 	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/cobra v1.8.1
+	github.com/spf13/cobra v1.9.1
 	sigs.k8s.io/release-utils v0.11.0
 )
 
