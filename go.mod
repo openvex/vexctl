@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.1
 
 require (
-	github.com/google/go-containerregistry v0.20.4
+	github.com/google/go-containerregistry v0.20.5
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/openvex/go-vex v0.2.5
 	github.com/owenrumney/go-sarif v1.1.1
