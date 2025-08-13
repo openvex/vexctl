@@ -31,7 +31,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/pkg/types"
 	"github.com/sirupsen/logrus"
-	"sigs.k8s.io/release-utils/util"
+	"sigs.k8s.io/release-utils/helpers"
 
 	"github.com/openvex/go-vex/pkg/sarif"
 	"github.com/openvex/go-vex/pkg/vex"
@@ -287,7 +287,7 @@ func attachAttestation(ctx context.Context, original *attestation.Attestation, p
 // SourceType returns a string indicating what kind of vex
 // source a URI points to
 func (impl *defaultVexCtlImplementation) SourceType(uri string) (string, error) {
-	if util.Exists(uri) {
+	if helpers.Exists(uri) {
 		return "file", nil
 	}
 
@@ -694,7 +694,7 @@ func (impl *defaultVexCtlImplementation) ReadTemplateData(opts *GenerateOpts, pr
 // InitTemplatesDir initializes the templates directory with an emptuy file and
 // a readme.
 func (impl *defaultVexCtlImplementation) InitTemplatesDir(path string) error {
-	if !util.Exists(path) {
+	if !helpers.Exists(path) {
 		if err := os.MkdirAll(path, os.FileMode(0o755)); err != nil {
 			return fmt.Errorf("creating templates dir: %s", err)
 		}
