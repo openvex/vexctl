@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/release-utils/util"
+	"sigs.k8s.io/release-utils/helpers"
 
 	"github.com/openvex/go-vex/pkg/vex"
 )
@@ -29,7 +29,7 @@ func (o *addOptions) Validate() error {
 		fileError = fmt.Errorf("you cannot specify --in-place and an output file at the same time")
 	}
 
-	if o.documentPath != "" && !util.Exists(o.documentPath) {
+	if o.documentPath != "" && !helpers.Exists(o.documentPath) {
 		docError = fmt.Errorf("the specified source document does not exist")
 	}
 
