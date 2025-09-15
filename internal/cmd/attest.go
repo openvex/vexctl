@@ -178,7 +178,7 @@ to user/test, even if the OpenVEX document has product entries for other images:
 			}
 
 			var out io.Writer = os.Stdout
-			if opts.outFileOption.outFilePath != "" {
+			if opts.outFilePath != "" {
 				out, err = os.Create(opts.outFilePath)
 				if err != nil {
 					return fmt.Errorf("opening attestation file: %w", err)

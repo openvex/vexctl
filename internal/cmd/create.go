@@ -114,11 +114,11 @@ Examples:
 
 			newDoc := vex.New()
 
-			newDoc.Metadata.Author = opts.Author
-			newDoc.Metadata.AuthorRole = opts.AuthorRole
+			newDoc.Author = opts.Author
+			newDoc.AuthorRole = opts.AuthorRole
 
 			if opts.DocumentID != "" {
-				newDoc.Metadata.ID = opts.DocumentID
+				newDoc.ID = opts.DocumentID
 			}
 
 			statement := opts.ToStatement()
