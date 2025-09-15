@@ -191,11 +191,11 @@ using its canonicalization hash.
 				return nil
 			}
 
-			newDoc.Metadata.Author = opts.Author
-			newDoc.Metadata.AuthorRole = opts.AuthorRole
+			newDoc.Author = opts.Author
+			newDoc.AuthorRole = opts.AuthorRole
 
 			if opts.DocumentID != "" {
-				newDoc.Metadata.ID = opts.DocumentID
+				newDoc.ID = opts.DocumentID
 			}
 
 			if err := writeDocument(newDoc, opts.outFilePath); err != nil {

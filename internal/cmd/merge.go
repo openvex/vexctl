@@ -68,9 +68,9 @@ Examples:
 			// TODO(puerco): Change this to vex merge options when we move
 			// the merge logic out of vexctl
 			newVex, err := vexctl.MergeFiles(context.Background(), &ctl.MergeOptions{
-				DocumentID:      opts.vexDocOptions.DocumentID,
-				Author:          opts.vexDocOptions.Author,
-				AuthorRole:      opts.vexDocOptions.AuthorRole,
+				DocumentID:      opts.DocumentID,
+				Author:          opts.Author,
+				AuthorRole:      opts.AuthorRole,
 				Products:        opts.Products,
 				Vulnerabilities: opts.Vulnerabilities,
 			}, args)

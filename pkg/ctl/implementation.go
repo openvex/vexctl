@@ -452,7 +452,7 @@ func (impl *defaultVexCtlImplementation) Merge(
 		}
 	}
 
-	vex.SortStatements(ss, *newDoc.Metadata.Timestamp)
+	vex.SortStatements(ss, *newDoc.Timestamp)
 
 	newDoc.Statements = ss
 
@@ -582,7 +582,7 @@ func (impl *defaultVexCtlImplementation) NormalizeProducts(subjects []productRef
 		case strings.HasPrefix(pref.Name, "pkg:"):
 			// When there are other purls, we only attest them as subjects if
 			// the product reference has hashes
-			if pref.Hashes != nil && len(pref.Hashes) > 0 { //nolint: gosimple
+			if len(pref.Hashes) > 0 {
 				otherRefs = append(otherRefs, pref)
 			} else {
 				unattestableRefs = append(unattestableRefs, pref)
@@ -714,7 +714,7 @@ func (impl *defaultVexCtlImplementation) InitTemplatesDir(path string) error {
 		return fmt.Errorf("creating initial openvex document: %w", err)
 	}
 	newDoc := vex.New()
-	newDoc.Metadata.Author = "vexctl (automated template)"
+	newDoc.Author = "vexctl (automated template)"
 	// TODO(puerco) This should be randomized
 	if _, err := newDoc.GenerateCanonicalID(); err != nil {
 		return fmt.Errorf("generating document ID: %w", err)

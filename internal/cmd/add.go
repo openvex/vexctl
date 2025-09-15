@@ -169,7 +169,7 @@ to preserve the original file, specify it using the --file flag:
 			doc.Version++
 
 			// If we specified --in-place, write to the same file we read
-			fPath := opts.outFileOption.outFilePath
+			fPath := opts.outFilePath
 			if opts.inPlace {
 				fPath = opts.documentPath
 			}
