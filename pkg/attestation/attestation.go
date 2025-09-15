@@ -142,7 +142,7 @@ func signAttestation(ctx context.Context, ko *options.KeyOpts, att *Attestation)
 	// the args here and if we're reusing the bundle, set it in ko.BundlePath
 	// Note that in this call we hardocde the pats empty, but we should get them
 	// from somewhere.
-	sv, err := sign.SignerFromKeyOpts(ctx, "", "", *ko)
+	sv, _, err := sign.SignerFromKeyOpts(ctx, "", "", *ko)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}
