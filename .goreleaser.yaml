@@ -59,7 +59,7 @@ signs:
 archives:
   - formats:
       - binary
-    name_template: "{{ .ProjectName }}-{{ .Arch }}-{{ .Os }}"
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
     allow_different_binary_count: true
 
 sboms:
