@@ -351,7 +351,11 @@ func (impl *defaultVexCtlImplementation) ReadSignedVEX(dssePayload cosign.Attest
 		return nil, nil
 	}
 
-	return &att.Predicate, nil
+	doc, ok := att.Predicate.GetParsed().(vex.VEX)
+	if !ok {
+		return nil, errors.New("unable to read predicata data as openvex")
+	}
+	return &doc, nil
 }
 
 type MergeOptions struct {
