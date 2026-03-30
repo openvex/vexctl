@@ -28,7 +28,7 @@ jobs:
 
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: '1.25'
+          go-version-file: 'go.mod'
           check-latest: true
           cache: false
 
@@ -68,8 +68,8 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      id-token: write
-      contents: write
+      id-token: write # To generate a token for signing
+      contents: write # To push the attestation to the release
 
     needs:
       - release
