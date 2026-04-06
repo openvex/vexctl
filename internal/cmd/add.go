@@ -102,7 +102,7 @@ to preserve the original file, specify it using the --file flag:
 					}
 					opts.documentPath = args[i]
 				case 1:
-					if len(opts.Products) != 1 && len(args) != 1 {
+					if len(opts.Products) > 1 {
 						return errors.New("product can only be specified once")
 					}
 					opts.Products = append(opts.Products, args[i])
