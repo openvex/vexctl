@@ -13,7 +13,8 @@ import (
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/sirupsen/logrus"
 
-	intoto "github.com/in-toto/in-toto-golang/in_toto"
+	intoto "github.com/in-toto/attestation/go/v1"
+	gvattestation "github.com/openvex/go-vex/pkg/attestation"
 	"github.com/openvex/vexctl/pkg/attestation"
 )
 
@@ -78,7 +79,7 @@ func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*atte
 
 	// Generate the attestation
 	att := attestation.New()
-	att.Predicate = *doc[0]
+	att.Predicate = gvattestation.NewPredicate(doc[0])
 	subjects := []productRef{}
 	for _, s := range subjectStrings {
 		subjects = append(subjects, productRef{Name: s})
@@ -108,10 +109,10 @@ func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*atte
 		logrus.Warnf(errNotAttestable, unattestableSubjects)
 	}
 
-	allSubjects := []productRef{}
+	allSubjects := []productRef{} //nolint:prealloc
 	allSubjects = append(allSubjects, imageSubjects...)
 	allSubjects = append(allSubjects, otherSubjects...)
-	subs := []intoto.Subject{}
+	subs := []*intoto.ResourceDescriptor{}
 	for _, sub := range allSubjects {
 		d := map[string]string{}
 		// TODO(puerco): Move this logic to the go-vex hash structs
@@ -123,7 +124,7 @@ func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*atte
 				d["sha512"] = string(h)
 			}
 		}
-		subs = append(subs, intoto.Subject{
+		subs = append(subs, &intoto.ResourceDescriptor{
 			Name:   sub.Name,
 			Digest: d,
 		})

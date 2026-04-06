@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/crane"
-	intoto "github.com/in-toto/in-toto-golang/in_toto"
+	intoto "github.com/in-toto/attestation/go/v1"
 	ovattest "github.com/openvex/go-vex/pkg/attestation"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
@@ -77,13 +77,13 @@ func (att *Attestation) Sign() error {
 }
 
 func (att *Attestation) AddImageSubjects(imageRefs []string) error {
-	subs := []intoto.Subject{}
+	subs := []*intoto.ResourceDescriptor{}
 	for _, refString := range imageRefs {
 		digest, err := crane.Digest(refString)
 		if err != nil {
 			return fmt.Errorf("getting image digest: %w", err)
 		}
-		s := intoto.Subject{
+		s := &intoto.ResourceDescriptor{
 			Name:   refString,
 			Digest: map[string]string{"sha256": strings.TrimPrefix(digest, "sha256:")},
 		}

@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	intoto "github.com/in-toto/in-toto-golang/in_toto"
+	intoto "github.com/in-toto/attestation/go/v1"
 	"github.com/stretchr/testify/require"
 
 	"github.com/openvex/go-vex/pkg/vex"
@@ -175,13 +175,13 @@ func TestVerifyImageSubjects(t *testing.T) {
 	impl := defaultVexCtlImplementation{}
 	att := attestation.New()
 	for _, tc := range []struct {
-		subjects []intoto.Subject
+		subjects []*intoto.ResourceDescriptor
 		products []string
 		mustErr  bool
 	}{
 		{
 			// Literal match
-			[]intoto.Subject{
+			[]*intoto.ResourceDescriptor{
 				{Name: "ghcr.io/test/image:canary"},
 			},
 			[]string{"ghcr.io/test/image:canary"},
@@ -189,7 +189,7 @@ func TestVerifyImageSubjects(t *testing.T) {
 		},
 		{
 			// Tags are not translated
-			[]intoto.Subject{
+			[]*intoto.ResourceDescriptor{
 				{Name: "ghcr.io/test/image:canary"},
 			},
 			[]string{"ghcr.io/test/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99"},
@@ -197,7 +197,7 @@ func TestVerifyImageSubjects(t *testing.T) {
 		},
 		{
 			// purls need to be translated
-			[]intoto.Subject{
+			[]*intoto.ResourceDescriptor{
 				{Name: "ghcr.io/test/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99"},
 			},
 			[]string{"pkg:oci/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99?repository_url=ghcr.io/test/image"},
