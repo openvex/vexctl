@@ -36,7 +36,7 @@ jobs:
           install-only: true
 
       - name: Install bom
-        uses: kubernetes-sigs/release-actions/setup-bom@cbe0488670ad0c0ff422fbef963da3bfe451a891 # v0.4.2
+        uses: kubernetes-sigs/release-actions/setup-bom@8753ea6bdadb814d779c6ec34eaca689dbfb492b # v0.4.3
 
       - name: Run Snapshot
         run: make snapshot
@@ -61,7 +61,7 @@ jobs:
           fetch-depth: 1
 
       - name: Install tejolote
-        uses: kubernetes-sigs/release-actions/setup-tejolote@cbe0488670ad0c0ff422fbef963da3bfe451a891 # v0.4.2
+        uses: kubernetes-sigs/release-actions/setup-tejolote@8753ea6bdadb814d779c6ec34eaca689dbfb492b # v0.4.3
 
       - run: |
           tejolote attest github://openvex/vexctl/"${GITHUB_RUN_ID}" --output vexctl.intoto.json
