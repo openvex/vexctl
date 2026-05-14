@@ -10,7 +10,7 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.11.0
 	github.com/sigstore/cosign/v2 v2.6.3
 	github.com/sigstore/rekor v1.5.1
-	github.com/sigstore/sigstore v1.10.5
+	github.com/sigstore/sigstore v1.10.6
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2
 	sigs.k8s.io/release-utils v0.12.4
