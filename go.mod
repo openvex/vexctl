@@ -10,7 +10,7 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.11.0
 	github.com/sigstore/cosign/v2 v2.6.3
 	github.com/sigstore/rekor v1.5.2
-	github.com/sigstore/sigstore v1.10.6
+	github.com/sigstore/sigstore v1.10.8
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2
 	sigs.k8s.io/release-utils v0.12.4
@@ -136,7 +136,7 @@ require (
 	github.com/jedisct1/go-minisign v0.0.0-20230811132847-661be99b8267 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.6 // indirect
-	github.com/letsencrypt/boulder v0.20260223.0 // indirect
+	github.com/letsencrypt/boulder v0.20260309.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
@@ -183,6 +183,7 @@ require (
 	github.com/transparency-dev/formats v0.0.0-20251017110053-404c0d5b696c // indirect
 	github.com/transparency-dev/merkle v0.0.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/zclconf/go-cty v1.10.0 // indirect
 	gitlab.com/gitlab-org/api/client-go v0.143.3 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
