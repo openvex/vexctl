@@ -50,9 +50,9 @@ builds:
 
 signs:
   - id: vexctl-keyless
-    signature: "${artifact}"
+    signature: "${artifact}.sigstore.json"
     cmd: cosign
-    args: ["sign-blob", "--bundle", "${artifact}.sigstore.json", "${artifact}"]
+    args: ["sign-blob", "--bundle", "${signature}", "${artifact}"]
     artifacts: all
 
 archives:
