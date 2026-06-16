@@ -14,6 +14,15 @@ import (
 	"github.com/openvex/go-vex/pkg/vex"
 )
 
+const (
+	sarifSampleVEX    = "testdata/sarif/sample.openvex.json"
+	sarifNginxGrype   = "testdata/sarif/nginx-grype.sarif.json"
+	sarifNginxTrivy   = "testdata/sarif/nginx-trivy.sarif.json"
+	sarifNginxSnyk    = "testdata/sarif/nginx-snyk.sarif.json"
+	sarifSampleHist   = "testdata/sarif/sample-history.json"
+	sarifSample2Vulns = "testdata/sarif/sample-2vulns.json"
+)
+
 func TestVexReport(t *testing.T) {
 	impl := defaultVexCtlImplementation{}
 	for _, tc := range []struct {
@@ -25,19 +34,19 @@ func TestVexReport(t *testing.T) {
 		lenAfterFilter int
 	}{
 		// One OpenVEX statement, filters one vuln
-		{"testdata/sarif/sample.openvex.json", 1, "testdata/sarif/nginx-grype.sarif.json", 1, 99, 98},
-		{"testdata/sarif/sample.openvex.json", 1, "testdata/sarif/nginx-trivy.sarif.json", 1, 99, 98},
-		{"testdata/sarif/sample.openvex.json", 1, "testdata/sarif/nginx-snyk.sarif.json", 2, 65, 64},
+		{sarifSampleVEX, 1, sarifNginxGrype, 1, 99, 98},
+		{sarifSampleVEX, 1, sarifNginxTrivy, 1, 99, 98},
+		{sarifSampleVEX, 1, sarifNginxSnyk, 2, 65, 64},
 
 		// Two OpenVEX statements, filters one vuln
-		{"testdata/sarif/sample-history.json", 2, "testdata/sarif/nginx-grype.sarif.json", 1, 99, 98},
-		{"testdata/sarif/sample-history.json", 2, "testdata/sarif/nginx-trivy.sarif.json", 1, 99, 98},
-		{"testdata/sarif/sample-history.json", 2, "testdata/sarif/nginx-snyk.sarif.json", 2, 65, 64},
+		{sarifSampleHist, 2, sarifNginxGrype, 1, 99, 98},
+		{sarifSampleHist, 2, sarifNginxTrivy, 1, 99, 98},
+		{sarifSampleHist, 2, sarifNginxSnyk, 2, 65, 64},
 
 		// Two OpenVEX statements, filters two vuln
-		{"testdata/sarif/sample-2vulns.json", 2, "testdata/sarif/nginx-grype.sarif.json", 1, 99, 96},
-		{"testdata/sarif/sample-2vulns.json", 2, "testdata/sarif/nginx-trivy.sarif.json", 1, 99, 96},
-		{"testdata/sarif/sample-2vulns.json", 2, "testdata/sarif/nginx-snyk.sarif.json", 2, 65, 63},
+		{sarifSample2Vulns, 2, sarifNginxGrype, 1, 99, 96},
+		{sarifSample2Vulns, 2, sarifNginxTrivy, 1, 99, 96},
+		{sarifSample2Vulns, 2, sarifNginxSnyk, 2, 65, 63},
 	} {
 		vexDoc, err := vex.Open(tc.vexDoc)
 		require.NoError(t, err)
