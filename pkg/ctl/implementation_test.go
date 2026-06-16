@@ -18,6 +18,14 @@ import (
 	"github.com/openvex/vexctl/pkg/attestation"
 )
 
+const (
+	productNginx        = "nginx"
+	productKubeAPIv1260 = "registry.k8s.io/kube-apiserver:v1.26.0"
+	productWolfiBash    = "pkg:apk/wolfi/bash@1.0.0"
+	productGHCRImage    = "ghcr.io/test/image:canary"
+	testdataTemplates   = "testdata/templates/"
+)
+
 func TestNormalizeProducts(t *testing.T) {
 	impl := defaultVexCtlImplementation{}
 	for _, tc := range []struct {
@@ -30,8 +38,8 @@ func TestNormalizeProducts(t *testing.T) {
 	}{
 		{
 			name:                 "docker hub reference",
-			products:             []productRef{{Name: "nginx"}},
-			expectedImage:        []productRef{{Name: "nginx", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			products:             []productRef{{Name: productNginx}},
+			expectedImage:        []productRef{{Name: productNginx, Hashes: make(map[vex.Algorithm]vex.Hash)}},
 			expectedOther:        []productRef{},
 			expectedUnattestable: []productRef{},
 			shouldFail:           false,
@@ -46,8 +54,8 @@ func TestNormalizeProducts(t *testing.T) {
 		},
 		{
 			name:                 "Custom registry, tagged image",
-			products:             []productRef{{Name: "registry.k8s.io/kube-apiserver:v1.26.0"}},
-			expectedImage:        []productRef{{Name: "registry.k8s.io/kube-apiserver:v1.26.0", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			products:             []productRef{{Name: productKubeAPIv1260}},
+			expectedImage:        []productRef{{Name: productKubeAPIv1260, Hashes: make(map[vex.Algorithm]vex.Hash)}},
 			expectedOther:        []productRef{},
 			expectedUnattestable: []productRef{},
 			shouldFail:           false,
@@ -55,7 +63,7 @@ func TestNormalizeProducts(t *testing.T) {
 		{
 			name:                 "purl, custom registry",
 			products:             []productRef{{Name: "pkg:oci/kube-apiserver?repository_url=registry.k8s.io/kube-apiserver/&tag=v1.26.0"}},
-			expectedImage:        []productRef{{Name: "registry.k8s.io/kube-apiserver:v1.26.0", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			expectedImage:        []productRef{{Name: productKubeAPIv1260, Hashes: make(map[vex.Algorithm]vex.Hash)}},
 			expectedOther:        []productRef{},
 			expectedUnattestable: []productRef{},
 			shouldFail:           false,
@@ -63,7 +71,7 @@ func TestNormalizeProducts(t *testing.T) {
 		{
 			name:                 "purl, dockerhub",
 			products:             []productRef{{Name: "pkg:oci/nginx"}},
-			expectedImage:        []productRef{{Name: "nginx", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			expectedImage:        []productRef{{Name: productNginx, Hashes: make(map[vex.Algorithm]vex.Hash)}},
 			expectedOther:        []productRef{},
 			expectedUnattestable: []productRef{},
 			shouldFail:           false,
@@ -83,17 +91,17 @@ func TestNormalizeProducts(t *testing.T) {
 		},
 		{
 			name:                 "other purl",
-			products:             []productRef{{Name: "pkg:apk/wolfi/bash@1.0.0"}},
+			products:             []productRef{{Name: productWolfiBash}},
 			expectedImage:        []productRef{},
 			expectedOther:        []productRef{},
-			expectedUnattestable: []productRef{{Name: "pkg:apk/wolfi/bash@1.0.0", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			expectedUnattestable: []productRef{{Name: productWolfiBash, Hashes: make(map[vex.Algorithm]vex.Hash)}},
 			shouldFail:           false,
 		},
 		{
 			name: "other purl with hashes",
 			products: []productRef{
 				{
-					Name: "pkg:apk/wolfi/bash@1.0.0",
+					Name: productWolfiBash,
 					Hashes: map[vex.Algorithm]vex.Hash{
 						vex.SHA256: vex.Hash("805f9e876d84aa72b0c10a810d4e16bf84b16c5399ddab86fb973e561e86de37"),
 					},
@@ -102,7 +110,7 @@ func TestNormalizeProducts(t *testing.T) {
 			expectedImage: []productRef{},
 			expectedOther: []productRef{
 				{
-					Name: "pkg:apk/wolfi/bash@1.0.0",
+					Name: productWolfiBash,
 					Hashes: map[vex.Algorithm]vex.Hash{
 						vex.SHA256: vex.Hash("805f9e876d84aa72b0c10a810d4e16bf84b16c5399ddab86fb973e561e86de37"),
 					},
@@ -113,10 +121,10 @@ func TestNormalizeProducts(t *testing.T) {
 		},
 		{
 			name:                 "mixed image ref and non-oci purl",
-			products:             []productRef{{Name: "pkg:apk/wolfi/bash@1.0.0"}, {Name: "nginx"}},
-			expectedImage:        []productRef{{Name: "nginx", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			products:             []productRef{{Name: productWolfiBash}, {Name: productNginx}},
+			expectedImage:        []productRef{{Name: productNginx, Hashes: make(map[vex.Algorithm]vex.Hash)}},
 			expectedOther:        []productRef{},
-			expectedUnattestable: []productRef{{Name: "pkg:apk/wolfi/bash@1.0.0", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			expectedUnattestable: []productRef{{Name: productWolfiBash, Hashes: make(map[vex.Algorithm]vex.Hash)}},
 			shouldFail:           false,
 		},
 	} {
@@ -144,21 +152,21 @@ func TestListDocumentProducts(t *testing.T) {
 			"image identifiers",
 			"testdata/images.vex.json",
 			[]productRef{
-				{Name: "nginx", Hashes: make(map[vex.Algorithm]vex.Hash)},
+				{Name: productNginx, Hashes: make(map[vex.Algorithm]vex.Hash)},
 				{Name: "pkg:oci/alpine@sha256%3Af271e74b17ced29b915d351685fd4644785c6d1559dd1f2d4189a5e851ef753a", Hashes: make(map[vex.Algorithm]vex.Hash)},
 				{Name: "pkg:oci/kube-apiserver?repository_url=registry.k8s.io&tag=v1.26.0", Hashes: make(map[vex.Algorithm]vex.Hash)},
-				{Name: "registry.k8s.io/kube-apiserver:v1.26.0", Hashes: make(map[vex.Algorithm]vex.Hash)},
+				{Name: productKubeAPIv1260, Hashes: make(map[vex.Algorithm]vex.Hash)},
 			},
 		},
 		{
 			"openvex-v0.0.1",
 			"testdata/v001-1.vex.json",
-			[]productRef{{Name: "pkg:apk/wolfi/bash@1.0.0", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			[]productRef{{Name: productWolfiBash, Hashes: make(map[vex.Algorithm]vex.Hash)}},
 		},
 		{
 			"openvex-v0.2.0",
 			"testdata/v020-1.vex.json",
-			[]productRef{{Name: "pkg:apk/wolfi/bash@1.0.0", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			[]productRef{{Name: productWolfiBash, Hashes: make(map[vex.Algorithm]vex.Hash)}},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -182,15 +190,15 @@ func TestVerifyImageSubjects(t *testing.T) {
 		{
 			// Literal match
 			[]*intoto.ResourceDescriptor{
-				{Name: "ghcr.io/test/image:canary"},
+				{Name: productGHCRImage},
 			},
-			[]string{"ghcr.io/test/image:canary"},
+			[]string{productGHCRImage},
 			false,
 		},
 		{
 			// Tags are not translated
 			[]*intoto.ResourceDescriptor{
-				{Name: "ghcr.io/test/image:canary"},
+				{Name: productGHCRImage},
 			},
 			[]string{"ghcr.io/test/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99"},
 			true,
@@ -339,7 +347,7 @@ func TestReadGoldenData(t *testing.T) {
 		{
 			name: "same identifier",
 			opts: &GenerateOpts{
-				TemplatesPath: "testdata/templates/",
+				TemplatesPath: testdataTemplates,
 			},
 			products: []*vex.Product{
 				{Component: vex.Component{ID: "pkg:oci/vexctl"}},
@@ -349,7 +357,7 @@ func TestReadGoldenData(t *testing.T) {
 		{
 			name: "no matching purl",
 			opts: &GenerateOpts{
-				TemplatesPath: "testdata/templates/",
+				TemplatesPath: testdataTemplates,
 			},
 			products: []*vex.Product{
 				{Component: vex.Component{ID: "pkg:oci/otherimage"}},
@@ -359,7 +367,7 @@ func TestReadGoldenData(t *testing.T) {
 		{
 			name: "versioned purl",
 			opts: &GenerateOpts{
-				TemplatesPath: "testdata/templates/",
+				TemplatesPath: testdataTemplates,
 			},
 			products: []*vex.Product{
 				{Component: vex.Component{ID: "pkg:oci/vexctl@sha256%3Af87abf1735e79b70407288f665316644d414dbf7bdf38c2f1c8e3a541d304d84"}},

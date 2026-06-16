@@ -16,6 +16,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	testProductPurl  = "pkg:golang/fmt"
+	testVulnCVE      = "CVE-2014-12345678"
+	testAliasCVE1234 = "CVE-2014-1234"
+)
+
 func TestVexDocOptionsValidate(t *testing.T) {
 	for s, tc := range map[string]struct {
 		sut     vexDocOptions
@@ -61,37 +67,37 @@ func TestVexStatementOptionsValidate(t *testing.T) {
 		"empty vulnerability": {
 			vexStatementOptions{
 				Status:        string(vex.StatusUnderInvestigation),
-				Products:      []string{"pkg:golang/fmt"},
+				Products:      []string{testProductPurl},
 				Vulnerability: "",
 			}, true,
 		},
 		"empty status": {
 			vexStatementOptions{
 				Status:        "",
-				Products:      []string{"pkg:golang/fmt"},
-				Vulnerability: "CVE-2014-12345678",
+				Products:      []string{testProductPurl},
+				Vulnerability: testVulnCVE,
 			}, true,
 		},
 		"invalid status": {
 			vexStatementOptions{
 				Status:        "cheese",
-				Products:      []string{"pkg:golang/fmt"},
-				Vulnerability: "CVE-2014-12345678",
+				Products:      []string{testProductPurl},
+				Vulnerability: testVulnCVE,
 			}, true,
 		},
 		"justification on non-not-affected": {
 			vexStatementOptions{
 				Status:        string(vex.StatusUnderInvestigation),
-				Products:      []string{"pkg:golang/fmt"},
-				Vulnerability: "CVE-2014-12345678",
+				Products:      []string{testProductPurl},
+				Vulnerability: testVulnCVE,
 				Justification: "justification goes here",
 			}, true,
 		},
 		"impact statement on non-not-affected": {
 			vexStatementOptions{
 				Status:          string(vex.StatusUnderInvestigation),
-				Products:        []string{"pkg:golang/fmt"},
-				Vulnerability:   "CVE-2014-12345678",
+				Products:        []string{testProductPurl},
+				Vulnerability:   testVulnCVE,
 				ImpactStatement: "buffer underrun is never run under",
 			}, true,
 		},
@@ -99,31 +105,31 @@ func TestVexStatementOptionsValidate(t *testing.T) {
 			vexStatementOptions{
 				Status:        string(vex.StatusNotAffected),
 				Products:      []string{"pkg:oci/alpine@sha256:124c7d2707904eea7431fffe91522a01e5a861a624ee31d03372cc1d138a3126", "pkg:oci/busybox@sha256:c6ab5a1a2bc330f3f9616b20c7fba7716cadd941514cf80f8d7c3da8af6b0946"},
-				Subcomponents: []string{"pkg:golang/fmt"},
-				Vulnerability: "CVE-2014-12345678",
+				Subcomponents: []string{testProductPurl},
+				Vulnerability: testVulnCVE,
 			}, true,
 		},
 		"repeated aliases found": {
 			vexStatementOptions{
 				Status:        string(vex.StatusUnderInvestigation),
-				Products:      []string{"pkg:golang/fmt"},
-				Vulnerability: "CVE-2014-12345678",
-				Aliases:       []string{"CVE-2014-1234", "CVE-2014-1234"},
+				Products:      []string{testProductPurl},
+				Vulnerability: testVulnCVE,
+				Aliases:       []string{testAliasCVE1234, testAliasCVE1234},
 			}, true,
 		},
 		"repeated alias and vulnerability ID": {
 			vexStatementOptions{
 				Status:        string(vex.StatusUnderInvestigation),
-				Products:      []string{"pkg:golang/fmt"},
-				Vulnerability: "CVE-2014-12345678",
-				Aliases:       []string{"CVE-2014-1234", "CVE-2014-12345678"},
+				Products:      []string{testProductPurl},
+				Vulnerability: testVulnCVE,
+				Aliases:       []string{testAliasCVE1234, testVulnCVE},
 			}, true,
 		},
 		"ok": {
 			vexStatementOptions{
 				Status:        string(vex.StatusUnderInvestigation),
-				Products:      []string{"pkg:golang/fmt"},
-				Vulnerability: "CVE-2014-12345678",
+				Products:      []string{testProductPurl},
+				Vulnerability: testVulnCVE,
 			}, false,
 		},
 	} {
