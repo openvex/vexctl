@@ -12,8 +12,10 @@ import (
 	"testing"
 
 	intoto "github.com/in-toto/attestation/go/v1"
+	gosarif "github.com/owenrumney/go-sarif/sarif"
 	"github.com/stretchr/testify/require"
 
+	"github.com/openvex/go-vex/pkg/sarif"
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/openvex/vexctl/pkg/attestation"
 )
@@ -420,4 +422,33 @@ func TestInitTemplatesDir(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestApplySingleVEXNoDocumentTimestamp(t *testing.T) {
+	// The document timestamp is optional, and vex.Open returns a document
+	// without one, so ApplySingleVEX must not dereference it.
+	doc := `{"@context":"https://openvex.dev/ns/v0.2.0","@id":"https://example.com/vex/1",` +
+		`"author":"test","version":1,"statements":[{"vulnerability":{"name":"CVE-2024-0001"},` +
+		`"products":[{"@id":"pkg:oci/test"}],"status":"not_affected",` +
+		`"justification":"component_not_present"}]}`
+
+	path := filepath.Join(t.TempDir(), "no-timestamp.vex.json")
+	require.NoError(t, os.WriteFile(path, []byte(doc), 0o600))
+
+	vexDoc, err := vex.Open(path)
+	require.NoError(t, err)
+	require.Nil(t, vexDoc.Timestamp)
+
+	// A rule ID that is not a vulnerability identifier, so the result is kept
+	// as is and the assertion stays on the timestamp handling.
+	report := sarif.New()
+	run := gosarif.NewRun("test", "https://example.com")
+	ruleID := "gosec-G101"
+	run.Results = append(run.Results, &gosarif.Result{RuleID: &ruleID})
+	report.Runs = append(report.Runs, run)
+
+	impl := defaultVexCtlImplementation{}
+	newReport, err := impl.ApplySingleVEX(report, vexDoc)
+	require.NoError(t, err)
+	require.Len(t, newReport.Runs[0].Results, 1)
 }
