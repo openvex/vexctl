@@ -3,12 +3,12 @@ module github.com/openvex/vexctl
 go 1.26.4
 
 require (
-	github.com/google/go-containerregistry v0.21.8
+	github.com/google/go-containerregistry v0.21.9
 	github.com/in-toto/attestation v1.2.0
 	github.com/openvex/go-vex v0.2.8
 	github.com/owenrumney/go-sarif v1.1.1
 	github.com/secure-systems-lab/go-securesystemslib v0.11.0
-	github.com/sigstore/cosign/v2 v2.6.4
+	github.com/sigstore/cosign/v2 v2.6.5
 	github.com/sigstore/rekor v1.5.3
 	github.com/sigstore/sigstore v1.10.9
 	github.com/sirupsen/logrus v1.9.4
