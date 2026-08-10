@@ -552,6 +552,12 @@ func (impl *defaultVexCtlImplementation) NormalizeProducts(subjects []productRef
 			qs := p.Qualifiers.Map()
 			if r, ok := qs["repository_url"]; ok {
 				ref = strings.TrimSuffix(r, "/")
+				// The repository_url qualifier may or may not already
+				// include the package name (both forms are seen in the
+				// wild), so only append it if it's not there yet.
+				if ref != p.Name && !strings.HasSuffix(ref, "/"+p.Name) {
+					ref += "/" + p.Name
+				}
 			} else {
 				// digest or image
 				ref = p.Name

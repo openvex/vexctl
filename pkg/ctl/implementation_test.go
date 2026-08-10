@@ -61,6 +61,14 @@ func TestNormalizeProducts(t *testing.T) {
 			shouldFail:           false,
 		},
 		{
+			name:                 "purl, repository_url without package name",
+			products:             []productRef{{Name: "pkg:oci/ubuntu?repository_url=localhost:5000/demo&tag=24.04"}},
+			expectedImage:        []productRef{{Name: "localhost:5000/demo/ubuntu:24.04", Hashes: make(map[vex.Algorithm]vex.Hash)}},
+			expectedOther:        []productRef{},
+			expectedUnattestable: []productRef{},
+			shouldFail:           false,
+		},
+		{
 			name:                 "purl, dockerhub",
 			products:             []productRef{{Name: "pkg:oci/nginx"}},
 			expectedImage:        []productRef{{Name: "nginx", Hashes: make(map[vex.Algorithm]vex.Hash)}},
