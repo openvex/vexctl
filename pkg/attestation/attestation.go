@@ -142,11 +142,24 @@ func signAttestation(ctx context.Context, ko *options.KeyOpts, att *Attestation)
 	// the args here and if we're reusing the bundle, set it in ko.BundlePath
 	// Note that in this call we hardocde the pats empty, but we should get them
 	// from somewhere.
-	sv, _, err := sign.SignerFromKeyOpts(ctx, "", "", *ko)
+	sv, genKey, err := sign.SignerFromKeyOpts(ctx, "", "", *ko)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}
 	defer sv.Close()
+
+	// SignerFromKeyOpts only generates a local ephemeral key on the default
+	// keyless path (no --sk, no --key); it does not itself talk to Fulcio.
+	// When genKey is true we still need to exchange that ephemeral key for a
+	// short-lived certificate via KeylessSigner, mirroring cosign's own
+	// cmd/cosign/cli/attest/attest.go. Skipping this step leaves sv.Cert nil,
+	// so the certificate later uploaded to Rekor is empty (vexctl#428).
+	if genKey {
+		sv, err = sign.KeylessSigner(ctx, *ko, sv)
+		if err != nil {
+			return fmt.Errorf("getting keyless signer: %w", err)
+		}
+	}
 
 	// Wrap the attestation in the DSSE envelope
 	wrapped := dsse.WrapSigner(sv, "application/vnd.in-toto+json")
