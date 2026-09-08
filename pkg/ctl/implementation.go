@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	gosarif "github.com/owenrumney/go-sarif/sarif"
@@ -100,7 +101,14 @@ func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, ve
 	logrus.Infof("VEX document contains %d statements", len(vexDoc.Statements))
 
 	sortedStatements := vexDoc.Statements
-	vex.SortStatements(sortedStatements, *vexDoc.Timestamp)
+	// The document timestamp is optional and only acts as a fallback for
+	// statements that carry none of their own, so a document without one must
+	// not be dereferenced.
+	docTimestamp := time.Time{}
+	if vexDoc.Timestamp != nil {
+		docTimestamp = *vexDoc.Timestamp
+	}
+	vex.SortStatements(sortedStatements, docTimestamp)
 
 	// Search for negative VEX statements, that is those that cancel a CVE
 	for i := range report.Runs {
