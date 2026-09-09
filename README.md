@@ -148,6 +148,12 @@ was `under_investigation` and then `fixed` four hours later:
 vexctl attest --attach --sign mydata.vex.json cgr.dev/image@sha256:e4cf37d568d195b4..
 ```
 
+Signed attestations are written as [sigstore bundles](https://github.com/sigstore/protobuf-specs)
+and attached to images through the OCI referrers API, the layout used by
+cosign v3. Use `--format dsse` to write the bare DSSE envelope instead and
+`--attach-method legacy` to attach attestations in the cosign tag layout
+(the `.att` tag next to the image) read by older tooling.
+
 ### 3. VEXing a Results Set
 
 Using statements in a VEX document or from an attestation, `vexctl` will filter

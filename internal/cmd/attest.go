@@ -20,10 +20,11 @@ import (
 
 type attestOptions struct {
 	outFileOption
-	attach bool
-	sign   bool
-	format string
-	refs   []string
+	attach       bool
+	sign         bool
+	format       string
+	attachMethod string
+	refs         []string
 }
 
 func (o *attestOptions) AddFlags(cmd *cobra.Command) {
@@ -53,6 +54,16 @@ func (o *attestOptions) AddFlags(cmd *cobra.Command) {
 	)
 
 	cmd.PersistentFlags().StringVar(
+		&o.attachMethod,
+		"attach-method",
+		string(ctl.DefaultAttachMethod),
+		fmt.Sprintf(
+			"method used to attach attestations to images (%s or %s)",
+			ctl.AttachMethodReferrers, ctl.AttachMethodLegacy,
+		),
+	)
+
+	cmd.PersistentFlags().StringVar(
 		&o.format,
 		"format",
 		string(attestation.DefaultFormat),
@@ -78,9 +89,10 @@ func (o *attestOptions) Validate() error {
 	}
 
 	_, fErr := attestation.ParseFormat(o.format)
+	_, mErr := ctl.ParseAttachMethod(o.attachMethod)
 
 	return errors.Join(
-		sErr, fErr, o.outFileOption.Validate(),
+		sErr, fErr, mErr, o.outFileOption.Validate(),
 	)
 }
 
@@ -153,6 +165,13 @@ all subjects that parse as image references. If this behavior fails, try definin
 %s will use the credentials from the user's environment to authenticate to the
 registry, this means that if you can write to the registry, attaching should work.
 
+By default, attestations are attached as sigstore bundles that refer to the
+image through the OCI referrers API, the layout used by cosign v3. To attach
+the attestation as a DSSE envelope in the cosign tag layout (the .att tag next
+to the image) used by older versions of cosign and %s, use --attach-method:
+
+  %s attest --attach --attach-method legacy vex.json user/test
+
 Note: --attach always implies --sign as sigstore does not support attaching
 unsigned attestations.
 
@@ -170,7 +189,7 @@ to user/test, even if the OpenVEX document has product entries for other images:
 %s attest --attach vex.json user/test
 
 
-`, appname, appname, appname, appname, appname, appname, appname, appname, appname, appname, appname),
+`, appname, appname, appname, appname, appname, appname, appname, appname, appname, appname, appname, appname, appname),
 		Use:               "attest [flags] openvex.json",
 		SilenceUsage:      false,
 		SilenceErrors:     false,
@@ -187,8 +206,14 @@ to user/test, even if the OpenVEX document has product entries for other images:
 			cmd.SilenceUsage = true
 			ctx := context.Background()
 
+			attachMethod, err := ctl.ParseAttachMethod(opts.attachMethod)
+			if err != nil {
+				return err
+			}
+
 			vexctl := ctl.New()
 			vexctl.Options.Sign = opts.sign
+			vexctl.Options.AttachMethod = attachMethod
 
 			att, err := vexctl.Attest(args[0], args[1:])
 			if err != nil {

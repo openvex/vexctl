@@ -8,6 +8,7 @@ package ctl
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/openvex/go-vex/pkg/sarif"
 	"github.com/openvex/go-vex/pkg/vex"
@@ -26,9 +27,40 @@ type VexCtl struct {
 }
 
 type Options struct {
-	Products []string // List of products to match in CSAF docs
-	Format   string   // Firmat of the vex documents
-	Sign     bool     // When true, attestations will be signed before attaching
+	Products     []string     // List of products to match in CSAF docs
+	Format       string       // Firmat of the vex documents
+	Sign         bool         // When true, attestations will be signed before attaching
+	AttachMethod AttachMethod // Method used to attach attestations to container images
+}
+
+// AttachMethod selects how attestations are attached to container images.
+type AttachMethod string
+
+const (
+	// AttachMethodReferrers attaches the attestation as a sigstore bundle
+	// artifact that refers to the image through the OCI referrers API. This
+	// is the layout used by cosign v3.
+	AttachMethodReferrers AttachMethod = "referrers"
+
+	// AttachMethodLegacy attaches the attestation as a DSSE envelope layer in
+	// the cosign tag layout: an image at the `.att` tag next to the subject.
+	AttachMethodLegacy AttachMethod = "legacy"
+)
+
+// DefaultAttachMethod is the attach method used when none is specified.
+const DefaultAttachMethod = AttachMethodReferrers
+
+// ParseAttachMethod returns the AttachMethod matching a string. An empty
+// string resolves to the default method.
+func ParseAttachMethod(s string) (AttachMethod, error) {
+	switch m := AttachMethod(strings.ToLower(s)); m {
+	case "":
+		return DefaultAttachMethod, nil
+	case AttachMethodReferrers, AttachMethodLegacy:
+		return m, nil
+	default:
+		return "", fmt.Errorf("unknown attach method %q (supported: %s, %s)", s, AttachMethodReferrers, AttachMethodLegacy)
+	}
 }
 
 // ProductRefs is a struct that captures a resolved component reference string
@@ -151,7 +183,7 @@ func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*atte
 
 // Attach attaches an attestation to a list of images
 func (vexctl *VexCtl) Attach(ctx context.Context, att *attestation.Attestation, refs ...string) (err error) {
-	if err := vexctl.impl.Attach(ctx, att, refs...); err != nil {
+	if err := vexctl.impl.Attach(ctx, vexctl.Options, att, refs...); err != nil {
 		return fmt.Errorf("attaching attestation: %w", err)
 	}
 
