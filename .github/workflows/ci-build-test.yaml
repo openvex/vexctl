@@ -81,7 +81,7 @@ jobs:
           cache: true
 
       - name: Test
-        run: go test -v ./...
+        run: go test -race -v ./...
 
   # Gate job with a stable name for branch protection. Fails if any
   # matrix leg failed or was cancelled.
