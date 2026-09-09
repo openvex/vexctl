@@ -7,49 +7,61 @@ package attestation
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
+	"github.com/carabiner-dev/signer"
 	"github.com/google/go-containerregistry/pkg/crane"
 	intoto "github.com/in-toto/attestation/go/v1"
 	ovattest "github.com/openvex/go-vex/pkg/attestation"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/sigstore/sigstore/pkg/signature/dsse"
-	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/encoding/protojson"
 )
+
+// Format selects how a signed attestation is serialized.
+type Format string
+
+const (
+	// FormatBundle writes the signed attestation as a sigstore bundle. The
+	// bundle carries the DSSE envelope together with the signing certificate
+	// and the transparency log entry, which makes it verifiable on its own.
+	FormatBundle Format = "bundle"
+
+	// FormatDSSE writes only the DSSE envelope wrapping the signed statement.
+	// This is the legacy vexctl output. Envelopes signed with a sigstore
+	// certificate cannot be verified on their own as the certificate and
+	// the transparency log entry only travel in the bundle.
+	FormatDSSE Format = "dsse"
+)
+
+// DefaultFormat is the format used when none is specified.
+const DefaultFormat = FormatBundle
+
+// ParseFormat returns the Format matching a string. An empty string
+// resolves to the default format.
+func ParseFormat(s string) (Format, error) {
+	switch f := Format(strings.ToLower(s)); f {
+	case "":
+		return DefaultFormat, nil
+	case FormatBundle, FormatDSSE:
+		return f, nil
+	default:
+		return "", fmt.Errorf("unknown attestation format %q (supported: %s, %s)", s, FormatBundle, FormatDSSE)
+	}
+}
 
 type Attestation struct {
 	ovattest.Attestation
 
-	// Sign is boolean that signals if the attestation has been signed
+	// Signed is boolean that signals if the attestation has been signed
 	Signed bool `json:"-"`
 
-	// signatureData embeds the signed attestaion, the certificate used to sign
-	// it and the transparency log inclusion proof
-	SignatureData *SignatureData `json:"-"`
-}
-
-type SignatureData struct {
-	// CertData of the cert used to sign the attestation encodeded in PEM
-	CertData []byte `json:"-"`
-
-	// Chain contains the intermediate certificate chain of the attestation's cert
-	Chain []byte `json:"-"`
-
-	// Entry contains the proof of inclusion to the transparency log
-	Entry *models.LogEntryAnon `json:"-"`
-
-	// signedPayload contains the resulting blob after the attestation was
-	// signed.
-	signedPayload []byte
+	// Artifact holds the signed attestation as returned by the signer: a
+	// sigstore bundle when signed with a certificate or a bare DSSE envelope
+	// when signed with a key. It is nil until the attestation is signed.
+	Artifact signer.SignedArtifact `json:"-"`
 }
 
 func New() *Attestation {
@@ -59,18 +71,46 @@ func New() *Attestation {
 	}
 }
 
-// Sign the attestation
-func (att *Attestation) Sign() error {
-	ctx, ko := initSigning()
+// StatementJSON returns the in-toto statement serialized as JSON. This is
+// the payload that gets signed.
+func (att *Attestation) StatementJSON() ([]byte, error) {
+	var b bytes.Buffer
+	if err := att.Attestation.ToJSON(&b); err != nil {
+		return nil, fmt.Errorf("serializing attestation to json: %w", err)
+	}
+	return b.Bytes(), nil
+}
 
-	// Sign the attestaion.
-	if err := signAttestation(ctx, &ko, att); err != nil {
+// Sign signs the attestation with sigstore. The signing flow uses ambient
+// credentials when they are available and falls back to the interactive
+// OIDC flow otherwise. The resulting sigstore bundle, which includes the
+// signing certificate and the transparency log entry, is stored in the
+// attestation's Artifact field.
+func (att *Attestation) Sign() error {
+	data, err := att.StatementJSON()
+	if err != nil {
+		return err
+	}
+
+	s := signer.NewSigner()
+	defer func() {
+		if err := s.Close(); err != nil {
+			logrus.Warnf("closing signer: %v", err)
+		}
+	}()
+
+	artifact, err := s.SignStatement(data)
+	if err != nil {
 		return fmt.Errorf("signing attestation: %w", err)
 	}
 
-	// Register the signature in rekor
-	if err := appendSignatureDataToTLog(ctx, &ko, att); err != nil {
-		return fmt.Errorf("recording signature data to transparency log: %w", err)
+	att.Artifact = artifact
+	att.Signed = true
+
+	if bundle, ok := artifact.(*signer.BundleArtifact); ok && bundle.Bundle != nil {
+		for _, entry := range bundle.Bundle.GetVerificationMaterial().GetTlogEntries() {
+			logrus.Infof("transparency log entry created with index %d", entry.GetLogIndex())
+		}
 	}
 
 	return nil
@@ -98,106 +138,52 @@ func (att *Attestation) AddImageSubjects(imageRefs []string) error {
 	return nil
 }
 
-// ToJSON intercepts the openves to json call and if the attestation is signed
-// writes the signed data to io.Writer w instead of the original attestation.
-func (att *Attestation) ToJSON(w io.Writer) error {
+// Write serializes the attestation to w. Unsigned attestations are always
+// written as bare in-toto statements. Signed attestations are written in the
+// requested format: the sigstore bundle produced by the signer or just the
+// DSSE envelope it wraps.
+func (att *Attestation) Write(w io.Writer, format Format) error {
 	if !att.Signed {
 		return att.Attestation.ToJSON(w)
 	}
-	if att.SignatureData == nil || len(att.SignatureData.signedPayload) == 0 {
+	if att.Artifact == nil {
 		return errors.New("consistency error: attestation is signed but data is empty")
 	}
 
-	if _, err := w.Write(att.SignatureData.signedPayload); err != nil {
-		return fmt.Errorf("writing signed attestation: %w", err)
+	switch format {
+	case FormatBundle, "":
+		if _, err := att.Artifact.WriteTo(w); err != nil {
+			return fmt.Errorf("writing signed attestation: %w", err)
+		}
+		return nil
+	case FormatDSSE:
+		bundle, ok := att.Artifact.(*signer.BundleArtifact)
+		if !ok {
+			// Attestations signed with a key are already bare envelopes
+			if _, err := att.Artifact.WriteTo(w); err != nil {
+				return fmt.Errorf("writing signed attestation: %w", err)
+			}
+			return nil
+		}
+		env := bundle.Bundle.GetDsseEnvelope()
+		if env == nil {
+			return errors.New("signed bundle does not contain a DSSE envelope")
+		}
+		data, err := protojson.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(env)
+		if err != nil {
+			return fmt.Errorf("marshaling DSSE envelope: %w", err)
+		}
+		if _, err := w.Write(data); err != nil {
+			return fmt.Errorf("writing DSSE envelope: %w", err)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unknown attestation format %q", format)
 	}
-	return nil
 }
 
-// initSigning initializes the options and context needed to sign. Right now
-// it only sets up some default options and a backgrous context but we
-// should wire the options set from the CLI to this function
-func initSigning() (context.Context, options.KeyOpts) {
-	ko := options.KeyOpts{
-		FulcioURL:                options.DefaultFulcioURL,
-		RekorURL:                 options.DefaultRekorURL,
-		OIDCIssuer:               options.DefaultOIDCIssuerURL,
-		OIDCClientID:             "sigstore",
-		InsecureSkipFulcioVerify: false,
-		SkipConfirmation:         true,
-	}
-
-	ctx := context.Background()
-	// TODO(puerco): Support context.WithTimeout(ctx, timeout)
-
-	return ctx, ko
-}
-
-// signAttestation creates a signer and signs the attestation. The attestation's
-// SignatureData field will be populated with the certificate, chain and the
-// attestaion data wrapped in its DSSE envelope.
-func signAttestation(ctx context.Context, ko *options.KeyOpts, att *Attestation) error {
-	// TODO(puerco): Investigate supporting certificates preloaded in the
-	// attestation. We would need to dump them to disk and load them into
-	// the args here and if we're reusing the bundle, set it in ko.BundlePath
-	// Note that in this call we hardocde the pats empty, but we should get them
-	// from somewhere.
-	sv, _, err := sign.SignerFromKeyOpts(ctx, "", "", *ko)
-	if err != nil {
-		return fmt.Errorf("getting signer: %w", err)
-	}
-	defer sv.Close()
-
-	// Wrap the attestation in the DSSE envelope
-	wrapped := dsse.WrapSigner(sv, "application/vnd.in-toto+json")
-
-	var b bytes.Buffer
-	if err := att.ToJSON(&b); err != nil {
-		return fmt.Errorf("serializing attestation to json: %w", err)
-	}
-
-	// SIGN!
-	signedPayload, err := wrapped.SignMessage(
-		bytes.NewReader(b.Bytes()), signatureoptions.WithContext(ctx),
-	)
-	if err != nil {
-		return fmt.Errorf("signing attestation: %w", err)
-	}
-
-	// Assign the new data to the attestation
-	att.SignatureData = &SignatureData{
-		CertData:      sv.Cert,
-		Chain:         sv.Chain,
-		signedPayload: signedPayload,
-	}
-	att.Signed = true
-
-	return nil
-}
-
-// appendSignatureDataToTLog records the signature data to the transparency log
-// (rekor). The proof of inclusion will be added to the attestation's SignatureData
-// struct.
-// If uploading fails, the signature data will be destroyed to guarantee an atomic
-// operation of attesation.Sign()
-func appendSignatureDataToTLog(ctx context.Context, ko *options.KeyOpts, att *Attestation) error {
-	tlogClient, err := rekor.NewClient(ko.RekorURL)
-	if err != nil {
-		att.SignatureData = nil
-		return fmt.Errorf("creating rekor client: %w", err)
-	}
-
-	// ...and upload the signature data
-	entry, err := cosign.TLogUploadDSSEEnvelope(
-		ctx, tlogClient, att.SignatureData.signedPayload, att.SignatureData.CertData,
-	)
-	if err != nil {
-		att.SignatureData = nil
-		return fmt.Errorf("uploading to transparency log: %w", err)
-	}
-
-	att.SignatureData.Entry = entry
-	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-
-	return nil
+// ToJSON writes the attestation as JSON to w. Signed attestations are
+// written in the default format, use Write to choose another one.
+func (att *Attestation) ToJSON(w io.Writer) error {
+	return att.Write(w, DefaultFormat)
 }

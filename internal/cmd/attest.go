@@ -13,6 +13,7 @@ import (
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/openvex/vexctl/pkg/attestation"
 	"github.com/openvex/vexctl/pkg/ctl"
 	"github.com/spf13/cobra"
 )
@@ -21,6 +22,7 @@ type attestOptions struct {
 	outFileOption
 	attach bool
 	sign   bool
+	format string
 	refs   []string
 }
 
@@ -49,6 +51,16 @@ func (o *attestOptions) AddFlags(cmd *cobra.Command) {
 		[]string{},
 		"list of image references to attach the attestation to",
 	)
+
+	cmd.PersistentFlags().StringVar(
+		&o.format,
+		"format",
+		string(attestation.DefaultFormat),
+		fmt.Sprintf(
+			"output format of signed attestations (%s or %s)",
+			attestation.FormatBundle, attestation.FormatDSSE,
+		),
+	)
 }
 
 // Validate checks if the options are sane
@@ -65,8 +77,10 @@ func (o *attestOptions) Validate() error {
 		o.sign = true
 	}
 
+	_, fErr := attestation.ParseFormat(o.format)
+
 	return errors.Join(
-		sErr, o.outFileOption.Validate(),
+		sErr, fErr, o.outFileOption.Validate(),
 	)
 }
 
@@ -110,7 +124,7 @@ the product has hashes associated with it.
 Signing Attestations
 --------------------
 
-Passing the --sign flag will trigger the cosign signing flow, either asking for
+Passing the --sign flag will trigger the sigstore signing flow, either asking for
 credentials from the user or trying to get them from the environment:
 
   %s attest --sign data.vex.json
@@ -118,6 +132,16 @@ credentials from the user or trying to get them from the environment:
 When signing an attestation, the standard sigstore signing flow will be triggered
 if credentials are not found in the environment. Refer to the sigstore
 documentation for details.
+
+Signed attestations are written as sigstore bundles. The bundle wraps the
+signed attestation together with the signing certificate and its transparency
+log entry, which makes it verifiable on its own. To write only the DSSE
+envelope, as previous versions of %s did, use --format dsse:
+
+  %s attest --sign --format dsse data.vex.json
+
+Note that a bare DSSE envelope signed with a sigstore certificate cannot be
+verified by itself as the certificate is not part of the envelope.
 
 Attaching Attestations
 ----------------------
@@ -146,8 +170,8 @@ to user/test, even if the OpenVEX document has product entries for other images:
 %s attest --attach vex.json user/test
 
 
-`, appname, appname, appname, appname, appname, appname, appname, appname, appname),
-		Use:               "attest",
+`, appname, appname, appname, appname, appname, appname, appname, appname, appname, appname, appname),
+		Use:               "attest [flags] openvex.json",
 		SilenceUsage:      false,
 		SilenceErrors:     false,
 		PersistentPreRunE: initLogging,
@@ -166,13 +190,13 @@ to user/test, even if the OpenVEX document has product entries for other images:
 			vexctl := ctl.New()
 			vexctl.Options.Sign = opts.sign
 
-			attestation, err := vexctl.Attest(args[0], args[1:])
+			att, err := vexctl.Attest(args[0], args[1:])
 			if err != nil {
 				return fmt.Errorf("generating attestation: %w", err)
 			}
 
 			if opts.attach {
-				if err := vexctl.Attach(ctx, attestation); err != nil {
+				if err := vexctl.Attach(ctx, att); err != nil {
 					return fmt.Errorf("attaching attestation: %w", err)
 				}
 			}
@@ -184,8 +208,12 @@ to user/test, even if the OpenVEX document has product entries for other images:
 					return fmt.Errorf("opening attestation file: %w", err)
 				}
 			}
-			if err := attestation.ToJSON(out); err != nil {
-				return fmt.Errorf("marshaling attestation to json")
+			format, err := attestation.ParseFormat(opts.format)
+			if err != nil {
+				return err
+			}
+			if err := att.Write(out, format); err != nil {
+				return fmt.Errorf("writing attestation: %w", err)
 			}
 
 			return nil
