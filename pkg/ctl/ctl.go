@@ -141,6 +141,12 @@ func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*atte
 		logrus.Warnf(errNotAttestable, unattestableSubjects)
 	}
 
+	// Look up the digests of the images that don't have one (eg tags)
+	imageSubjects, err = vexctl.impl.ResolveImageDigests(imageSubjects)
+	if err != nil {
+		return nil, fmt.Errorf("resolving image digests: %w", err)
+	}
+
 	allSubjects := []productRef{} //nolint:prealloc
 	allSubjects = append(allSubjects, imageSubjects...)
 	allSubjects = append(allSubjects, otherSubjects...)

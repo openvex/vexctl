@@ -87,6 +87,17 @@ func TestNormalizeProducts(t *testing.T) {
 			shouldFail:           false,
 		},
 		{
+			name:     "image reference with digest",
+			products: []productRef{{Name: "ghcr.io/test/image@sha256:8b0d3f1c6d7f9a2b4c5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4"}},
+			expectedImage: []productRef{{
+				Name:   "ghcr.io/test/image@sha256:8b0d3f1c6d7f9a2b4c5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4",
+				Hashes: map[vex.Algorithm]vex.Hash{vex.SHA256: "8b0d3f1c6d7f9a2b4c5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4"},
+			}},
+			expectedOther:        []productRef{},
+			expectedUnattestable: []productRef{},
+			shouldFail:           false,
+		},
+		{
 			name:     "purl, with digest",
 			products: []productRef{{Name: "pkg:oci/alpine@sha256%3Af271e74b17ced29b915d351685fd4644785c6d1559dd1f2d4189a5e851ef753a"}},
 			expectedImage: []productRef{{
@@ -459,4 +470,36 @@ func TestApplySingleVEXNoDocumentTimestamp(t *testing.T) {
 	newReport, err := impl.ApplySingleVEX(report, vexDoc)
 	require.NoError(t, err)
 	require.Len(t, newReport.Runs[0].Results, 1)
+}
+
+func TestHashFromDigest(t *testing.T) {
+	for _, tc := range []struct {
+		digest string
+		algo   vex.Algorithm
+		hash   vex.Hash
+		ok     bool
+	}{
+		{"sha256:0a1b", vex.SHA256, "0a1b", true},
+		{"sha512:2c3d", vex.SHA512, "2c3d", true},
+		{"md5:4e5f", "", "", false},
+		{"sha256:", "", "", false},
+		{"nodigest", "", "", false},
+	} {
+		algo, hash, ok := hashFromDigest(tc.digest)
+		require.Equal(t, tc.ok, ok, tc.digest)
+		require.Equal(t, tc.algo, algo, tc.digest)
+		require.Equal(t, tc.hash, hash, tc.digest)
+	}
+}
+
+func TestResolveImageDigestsKeepsExistingHashes(t *testing.T) {
+	impl := defaultVexCtlImplementation{}
+	refs := []productRef{{
+		Name:   "ghcr.io/test/image@sha256:abc",
+		Hashes: map[vex.Algorithm]vex.Hash{vex.SHA256: "abc"},
+	}}
+	// References with hashes are not looked up, so no network access happens
+	got, err := impl.ResolveImageDigests(refs)
+	require.NoError(t, err)
+	require.Equal(t, refs, got)
 }
