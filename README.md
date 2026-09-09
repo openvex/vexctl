@@ -14,15 +14,42 @@ implications for their product.
 
 ## Installing
 
-If you have Go 1.16 or later installed, you can run the following to install `vexctl`:
+### Prebuilt binaries
+
+Every release ships signed binaries for Linux, macOS and Windows on the
+[releases page](https://github.com/openvex/vexctl/releases). Download the
+binary for your platform, make it executable and put it in your `PATH`.
+
+Each binary comes with a sigstore bundle (`*.sigstore.json`) you can verify
+with [cosign](https://github.com/sigstore/cosign) before running it:
+
 ```console
-go install github.com/openvex/vexctl@latest
+cosign verify-blob \
+  --bundle vexctl-linux-amd64.sigstore.json \
+  --certificate-identity-regexp='^https://github.com/openvex/vexctl/' \
+  --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+  vexctl-linux-amd64
 ```
+
+### Homebrew
 
 If you use Homebrew, you can install the latest tagged version of `vexctl` using:
 ```console
 brew install vexctl
 ```
+
+### From source
+
+`vexctl` tracks recent Go releases. The Go version it requires is the `go`
+directive in [`go.mod`](go.mod). With Go 1.21 or later, `go install` downloads
+the required toolchain automatically, so this is enough:
+
+```console
+go install github.com/openvex/vexctl@latest
+```
+
+With an older Go, install a current toolchain from [go.dev/dl](https://go.dev/dl/)
+first.
 
 ## Operational Model
 

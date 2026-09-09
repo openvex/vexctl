@@ -25,7 +25,10 @@ import (
 	"github.com/carabiner-dev/collector/repository/coci"
 	"github.com/carabiner-dev/collector/repository/oci"
 	"github.com/carabiner-dev/signer"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
+	intoto "github.com/in-toto/attestation/go/v1"
 	gosarif "github.com/owenrumney/go-sarif/sarif"
 	purl "github.com/package-url/packageurl-go"
 	"github.com/regclient/regclient"
@@ -79,6 +82,7 @@ type Implementation interface {
 	LoadFiles(context.Context, []string) ([]*vex.VEX, error)
 	ListDocumentProducts(doc *vex.VEX) ([]productRef, error)
 	NormalizeProducts([]productRef) ([]productRef, []productRef, []productRef, error)
+	ResolveImageDigests([]productRef) ([]productRef, error)
 	VerifyImageSubjects(*attestation.Attestation, *vex.VEX) error
 	ReadTemplateData(*GenerateOpts, []*vex.Product) (*vex.VEX, error)
 	InitTemplatesDir(string) error
@@ -594,25 +598,13 @@ func (impl *defaultVexCtlImplementation) NormalizeProducts(subjects []productRef
 				// digest or image
 				ref = p.Name
 			}
-			var hash vex.Hash
-			var algo vex.Algorithm
 			if p.Version != "" {
 				ref += "@" + p.Version
-				parts := strings.Split(p.Version, ":")
-				if len(parts) > 1 {
-					hash = vex.Hash(parts[1])
-					switch parts[0] {
-					case "sha256":
-						algo = vex.SHA256
-					case "sha512":
-						algo = vex.SHA3512
-					}
+				if algo, hash, ok := hashFromDigest(p.Version); ok {
+					pref.Hashes[algo] = hash
 				}
 			} else if tag, ok := qs["tag"]; ok {
 				ref += ":" + tag
-			}
-			if algo != "" {
-				pref.Hashes[algo] = hash
 			}
 			pref.Name = ref
 			logrus.Debugf("%s is a purl for %s", pref.Name, ref)
@@ -626,17 +618,78 @@ func (impl *defaultVexCtlImplementation) NormalizeProducts(subjects []productRef
 				unattestableRefs = append(unattestableRefs, pref)
 			}
 		default:
-			// If not,try to parse the string as an image reference. If they can
-			// be parsed as image references but they cannot be looked up, attestting
-			// will fail trying to fetch their digests.
-			if _, err := name.ParseReference(pref.Name); err == nil {
-				imageRefs = append(imageRefs, pref)
-			} else {
+			// If not, try to parse the string as an image reference. References
+			// by digest already carry their hash. Tag references get their
+			// digests resolved from the registry later (see ResolveImageDigests)
+			// and attesting will fail if they cannot be looked up.
+			ref, err := name.ParseReference(pref.Name)
+			if err != nil {
 				otherRefs = append(otherRefs, pref)
+				continue
 			}
+			if digest, ok := ref.(name.Digest); ok {
+				if algo, hash, ok := hashFromDigest(digest.DigestStr()); ok {
+					pref.Hashes[algo] = hash
+				}
+			}
+			imageRefs = append(imageRefs, pref)
 		}
 	}
 	return imageRefs, otherRefs, unattestableRefs, nil
+}
+
+// Names of the digest algorithms as used in OCI digests and in the digest
+// maps of in-toto subjects.
+const (
+	digestAlgorithmSHA256 = "sha256"
+	digestAlgorithmSHA512 = "sha512"
+)
+
+// hashFromDigest splits an OCI digest string (eg sha256:abc...) into the VEX
+// algorithm and hash. Returns false if the algorithm is not supported.
+func hashFromDigest(digest string) (vex.Algorithm, vex.Hash, bool) {
+	algo, hash, found := strings.Cut(digest, ":")
+	if !found || hash == "" {
+		return "", "", false
+	}
+	switch algo {
+	case digestAlgorithmSHA256:
+		return vex.SHA256, vex.Hash(hash), true
+	case digestAlgorithmSHA512:
+		return vex.SHA512, vex.Hash(hash), true
+	default:
+		return "", "", false
+	}
+}
+
+// ResolveImageDigests looks up in the registry the digests of the image
+// references that do not have one yet (eg tag references) and returns the
+// list with the hashes populated. References that already carry a hash are
+// returned untouched.
+func (impl *defaultVexCtlImplementation) ResolveImageDigests(refs []productRef) ([]productRef, error) {
+	ret := make([]productRef, 0, len(refs))
+	for _, pref := range refs {
+		if len(pref.Hashes) > 0 {
+			ret = append(ret, pref)
+			continue
+		}
+
+		digest, err := crane.Digest(pref.Name, crane.WithAuthFromKeychain(authn.DefaultKeychain))
+		if err != nil {
+			return nil, fmt.Errorf("resolving digest of %s: %w", pref.Name, err)
+		}
+		algo, hash, ok := hashFromDigest(digest)
+		if !ok {
+			return nil, fmt.Errorf("unsupported digest %q for %s", digest, pref.Name)
+		}
+		if pref.Hashes == nil {
+			pref.Hashes = map[vex.Algorithm]vex.Hash{}
+		}
+		pref.Hashes[algo] = hash
+		logrus.Debugf("resolved %s to %s", pref.Name, digest)
+		ret = append(ret, pref)
+	}
+	return ret, nil
 }
 
 // VerifySubjectsPresent takes a list of references and ensures they are present
@@ -654,20 +707,85 @@ func (impl *defaultVexCtlImplementation) VerifyImageSubjects(
 		return fmt.Errorf("normalizing references: %s", err)
 	}
 
-	found := false
 	for _, r := range imageRefs {
-		for _, sb := range att.Subject {
-			found = false
-			if sb.Name == r.Name {
-				found = true
-				break
-			}
+		found, err := impl.subjectsContainImage(att.Subject, r)
+		if err != nil {
+			return fmt.Errorf("checking for %s in subjects: %w", r.Name, err)
 		}
 		if !found {
 			return fmt.Errorf("entry for %s not found in subjects %v", r, imageRefs)
 		}
 	}
 	return nil
+}
+
+// subjectsContainImage checks if a product image is among the attestation
+// subjects. A subject matches when its name is the same as the product's or
+// when it points to the same repository and carries the same digest. The
+// product digest is looked up in the registry when the product does not
+// have one and the check cannot be resolved by name.
+func (impl *defaultVexCtlImplementation) subjectsContainImage(subjects []*intoto.ResourceDescriptor, product productRef) (bool, error) {
+	for _, sb := range subjects {
+		if sb.GetName() == product.Name {
+			return true, nil
+		}
+	}
+
+	productRepo, ok := repositoryOfReference(product.Name)
+	if !ok {
+		return false, nil
+	}
+
+	// Collect the subjects in the same repository with digests to compare
+	candidates := []*intoto.ResourceDescriptor{}
+	for _, sb := range subjects {
+		if repo, ok := repositoryOfReference(sb.GetName()); ok && repo == productRepo && len(sb.GetDigest()) > 0 {
+			candidates = append(candidates, sb)
+		}
+	}
+	if len(candidates) == 0 {
+		return false, nil
+	}
+
+	if len(product.Hashes) == 0 {
+		resolved, err := impl.ResolveImageDigests([]productRef{product})
+		if err != nil {
+			return false, err
+		}
+		product = resolved[0]
+	}
+
+	for _, sb := range candidates {
+		for algo, hash := range product.Hashes {
+			if sb.GetDigest()[digestAlgorithmName(algo)] == string(hash) {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+// repositoryOfReference returns the repository (registry and path, without
+// tag or digest) of an image reference string.
+func repositoryOfReference(refString string) (string, bool) {
+	ref, err := name.ParseReference(refString)
+	if err != nil {
+		return "", false
+	}
+	return ref.Context().Name(), true
+}
+
+// digestAlgorithmName returns the name of a VEX hash algorithm as used in the
+// digest maps of in-toto subjects.
+func digestAlgorithmName(algo vex.Algorithm) string {
+	switch algo {
+	case vex.SHA256:
+		return digestAlgorithmSHA256
+	case vex.SHA512:
+		return digestAlgorithmSHA512
+	default:
+		return string(algo)
+	}
 }
 
 // ReadTemplateData reads a set of golden documents with data used to generate
