@@ -204,12 +204,12 @@ func (vexctl *VexCtl) VexFromURI(ctx context.Context, uri string) (vexData *vex.
 	}
 	var vexes []*vex.VEX
 	switch sourceType {
-	case "file":
+	case SourceTypeFile:
 		vexes, err = vexctl.impl.OpenVexData(vexctl.Options, []string{uri})
 		if err == nil {
 			vexData = vexes[0]
 		}
-	case "image":
+	case SourceTypeImage:
 		vexes, err = vexctl.impl.ReadImageAttestations(ctx, vexctl.Options, uri)
 		if err == nil {
 			if len(vexes) == 0 {

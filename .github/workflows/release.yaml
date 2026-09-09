@@ -28,19 +28,25 @@ jobs:
         with:
           persist-credentials: true
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - name: Determine Go versions
+        id: versions
+        uses: carabiner-dev/actions/go/versions@32587e82f960d49b36101e8c45d1956e511965d3 # v1.2.9
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: 'go.mod'
+          go-version: ${{ steps.versions.outputs.GO_MINOR_VERSION_STABLE }}
           check-latest: true
           cache: false
 
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
-      - name: Install bom
-        uses: kubernetes-sigs/release-actions/setup-bom@b5b8280a60e6e20607f77068011269b982c60971 # v0.4.5
-
       - uses: ko-build/setup-ko@61b4d1d396f5b2e7d6bb6fefdce3dc38d1a13445 # v0.10
+
+      - name: Set tag output
+        id: tag
+        run: echo "tag_name=${GITHUB_REF#refs/*/}" >> "$GITHUB_OUTPUT"
 
       - name: Set LDFLAGS
         id: ldflags
@@ -57,6 +63,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LDFLAGS: ${{ env.GO_FLAGS }}
+
+      - name: Generate SBOM
+        id: sbom
+        uses: carabiner-dev/actions/sbom/source@32587e82f960d49b36101e8c45d1956e511965d3 # v1.2.9
+        with:
+          codebases: "golang:." # Only generate the SBOM for the main go codebase
+          push-to-release: ${{ steps.tag.outputs.tag_name }}
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Log into ghcr.io
         run: echo ${{ secrets.GITHUB_TOKEN }} | ko login ghcr.io -u ${{ github.repository_owner }} --password-stdin

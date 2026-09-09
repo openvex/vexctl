@@ -21,11 +21,12 @@ import (
 )
 
 const (
-	productNginx        = "nginx"
-	productKubeAPIv1260 = "registry.k8s.io/kube-apiserver:v1.26.0"
-	productWolfiBash    = "pkg:apk/wolfi/bash@1.0.0"
-	productGHCRImage    = "ghcr.io/test/image:canary"
-	testdataTemplates   = "testdata/templates/"
+	productNginx           = "nginx"
+	productKubeAPIv1260    = "registry.k8s.io/kube-apiserver:v1.26.0"
+	productWolfiBash       = "pkg:apk/wolfi/bash@1.0.0"
+	productGHCRImage       = "ghcr.io/test/image:canary"
+	productGHCRImageDigest = "ghcr.io/test/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99"
+	testdataTemplates      = "testdata/templates/"
 )
 
 func TestNormalizeProducts(t *testing.T) {
@@ -221,13 +222,13 @@ func TestVerifyImageSubjects(t *testing.T) {
 			[]*intoto.ResourceDescriptor{
 				{Name: productGHCRImage},
 			},
-			[]string{"ghcr.io/test/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99"},
+			[]string{productGHCRImageDigest},
 			true,
 		},
 		{
 			// purls need to be translated
 			[]*intoto.ResourceDescriptor{
-				{Name: "ghcr.io/test/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99"},
+				{Name: productGHCRImageDigest},
 			},
 			[]string{"pkg:oci/image@sha256:74634d9736a45ca9f6e1187e783492199e020f4a5c19d0b1abc2b604f894ac99?repository_url=ghcr.io/test/image"},
 			false,
@@ -502,4 +503,35 @@ func TestResolveImageDigestsKeepsExistingHashes(t *testing.T) {
 	got, err := impl.ResolveImageDigests(refs)
 	require.NoError(t, err)
 	require.Equal(t, refs, got)
+}
+
+func TestSourceType(t *testing.T) {
+	impl := defaultVexCtlImplementation{}
+	dir := t.TempDir()
+	file := filepath.Join(dir, "vex.json")
+	require.NoError(t, os.WriteFile(file, []byte("{}"), 0o600))
+
+	for _, tc := range []struct {
+		name     string
+		uri      string
+		expected string
+		mustErr  bool
+	}{
+		{"existing file", file, SourceTypeFile, false},
+		{"directory is not a source", dir, "", true},
+		{"image reference", productGHCRImage, SourceTypeImage, false},
+		{"image reference with digest", productGHCRImageDigest, SourceTypeImage, false},
+		{"local registry reference", "127.0.0.1:5000/test/image:v1", SourceTypeImage, false},
+		{"missing file that is not a reference", filepath.Join(dir, "missing file.json"), "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := impl.SourceType(tc.uri)
+			if tc.mustErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, got)
+		})
+	}
 }
