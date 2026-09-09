@@ -11,8 +11,36 @@ on:
 permissions: {}
 
 jobs:
+  resolve-versions:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    outputs:
+      go-stable: ${{ steps.go-versions.outputs.GO_VERSION_STABLE }}
+      go-versions: ${{ steps.matrix.outputs.go-versions }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve Go versions
+        id: go-versions
+        uses: carabiner-dev/actions/go/versions@32587e82f960d49b36101e8c45d1956e511965d3 # v1.2.9
+
+      - name: Build version matrix
+        id: matrix
+        env:
+          GO_VERSION_STABLE: ${{ steps.go-versions.outputs.GO_VERSION_STABLE }}
+          GO_VERSION_PREVIOUS: ${{ steps.go-versions.outputs.GO_VERSION_PREVIOUS }}
+        run: |
+          echo "go-versions=[\"${GO_VERSION_STABLE}\",\"${GO_VERSION_PREVIOUS}\"]" >> "$GITHUB_OUTPUT"
+
   build:
     name: build
+    needs: resolve-versions
     runs-on: ubuntu-latest
 
     permissions:
@@ -23,32 +51,58 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - name: Set up Go ${{ needs.resolve-versions.outputs.go-stable }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: 'go.mod'
-          check-latest: true
+          go-version: ${{ needs.resolve-versions.outputs.go-stable }}
           cache: false
 
       - name: build
         run: make vex
 
-  test:
-    name: test
+  test-matrix:
+    name: test (go ${{ matrix.go-version }})
+    needs: resolve-versions
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ${{ fromJSON(needs.resolve-versions.outputs.go-versions) }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: 'go.mod'
-          check-latest: true
+          go-version: ${{ matrix.go-version }}
           cache: false
 
       - name: test
         run: make test
+
+  # Gate job with a stable name for branch protection. Fails if any
+  # matrix leg failed or was cancelled.
+  test:
+    name: test
+    needs: test-matrix
+    if: always()
+    runs-on: ubuntu-latest
+
+    permissions: {}
+
+    steps:
+      - name: Check test matrix result
+        env:
+          RESULT: ${{ needs.test-matrix.result }}
+        run: |
+          echo "test matrix result: ${RESULT}"
+          if [ "${RESULT}" != "success" ]; then
+            exit 1
+          fi
