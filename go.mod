@@ -3,7 +3,7 @@ module github.com/openvex/vexctl
 go 1.26.4
 
 require (
-	github.com/google/go-containerregistry v0.22.0
+	github.com/google/go-containerregistry v0.22.1
 	github.com/in-toto/attestation v1.2.0
 	github.com/openvex/go-vex v0.2.8
 	github.com/owenrumney/go-sarif v1.1.1
