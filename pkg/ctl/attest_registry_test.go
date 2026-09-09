@@ -1,3 +1,5 @@
+//go:build linux
+
 /*
 Copyright 2022 The OpenVEX Authors
 SPDX-License-Identifier: Apache-2.0
@@ -32,7 +34,8 @@ import (
 
 // testRegistry starts an in-memory OCI registry with referrers support and
 // returns its host:port. The loopback address makes the registry clients talk
-// plain HTTP to it.
+// plain HTTP to it. The tests in this file only run on Linux (see the build
+// constraint above).
 func testRegistry(t *testing.T) string {
 	t.Helper()
 	srv := httptest.NewServer(registry.New(registry.WithReferrersSupport(true)))

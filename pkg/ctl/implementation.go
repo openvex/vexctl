@@ -298,16 +298,24 @@ func imageRepository(imageRef string, method AttachMethod) (cattestation.Reposit
 	}
 }
 
+// Source types returned by SourceType
+const (
+	SourceTypeFile  = "file"
+	SourceTypeImage = "image"
+)
+
 // SourceType returns a string indicating what kind of vex
 // source a URI points to
 func (impl *defaultVexCtlImplementation) SourceType(uri string) (string, error) {
-	if helpers.Exists(uri) {
-		return "file", nil
+	// Only a path that exists and is a regular file is a file. Anything else
+	// (including strings the OS rejects as invalid filenames, as Windows does
+	// with image references) may still be an image reference.
+	if info, err := os.Stat(uri); err == nil && info.Mode().IsRegular() {
+		return SourceTypeFile, nil
 	}
 
-	_, err := name.ParseReference(uri)
-	if err == nil {
-		return "image", nil
+	if _, err := name.ParseReference(uri); err == nil {
+		return SourceTypeImage, nil
 	}
 
 	return "", errors.New("unable to resolve the vex source location")
@@ -865,17 +873,17 @@ func (impl *defaultVexCtlImplementation) InitTemplatesDir(path string) error {
 		return fmt.Errorf("unable to initialize templates dir, path is not empty")
 	}
 
-	mainFile, err := os.Create(filepath.Join(path, "main.openvex.json"))
-	if err != nil {
-		return fmt.Errorf("creating initial openvex document: %w", err)
-	}
 	newDoc := vex.New()
 	newDoc.Author = "vexctl (automated template)"
 	// TODO(puerco) This should be randomized
 	if _, err := newDoc.GenerateCanonicalID(); err != nil {
 		return fmt.Errorf("generating document ID: %w", err)
 	}
-	if err := newDoc.ToJSON(mainFile); err != nil {
+	var mainDoc bytes.Buffer
+	if err := newDoc.ToJSON(&mainDoc); err != nil {
+		return fmt.Errorf("serializing initial openvex document: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(path, "main.openvex.json"), mainDoc.Bytes(), os.FileMode(0o644)); err != nil {
 		return fmt.Errorf("writing initial openvex file to disk: %w", err)
 	}
 
