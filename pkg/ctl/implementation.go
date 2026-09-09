@@ -9,31 +9,31 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 
+	cattestation "github.com/carabiner-dev/attestation"
+	"github.com/carabiner-dev/collector"
+	"github.com/carabiner-dev/collector/envelope"
+	"github.com/carabiner-dev/collector/repository/coci"
+	"github.com/carabiner-dev/collector/repository/oci"
+	"github.com/carabiner-dev/signer"
 	"github.com/google/go-containerregistry/pkg/name"
 	gosarif "github.com/owenrumney/go-sarif/sarif"
 	purl "github.com/package-url/packageurl-go"
-	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
-	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
-	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
-	"github.com/sigstore/cosign/v2/pkg/oci/static"
-	"github.com/sigstore/cosign/v2/pkg/types"
+	"github.com/regclient/regclient"
+	"github.com/regclient/regclient/config"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/release-utils/helpers"
 
+	gvattestation "github.com/openvex/go-vex/pkg/attestation"
 	"github.com/openvex/go-vex/pkg/sarif"
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/openvex/vexctl/pkg/attestation"
@@ -72,7 +72,7 @@ type Implementation interface {
 	OpenVexData(Options, []string) ([]*vex.VEX, error)
 	Sort(docs []*vex.VEX) []*vex.VEX
 	AttestationBytes(*attestation.Attestation) ([]byte, error)
-	Attach(context.Context, *attestation.Attestation, ...string) error
+	Attach(context.Context, Options, *attestation.Attestation, ...string) error
 	SourceType(uri string) (string, error)
 	ReadImageAttestations(context.Context, Options, string) ([]*vex.VEX, error)
 	Merge(context.Context, *MergeOptions, []*vex.VEX) (*vex.VEX, error)
@@ -187,109 +187,111 @@ func (impl *defaultVexCtlImplementation) AttestationBytes(att *attestation.Attes
 	return b.Bytes(), nil
 }
 
-// Attach attaches an attestation to a container image in the registry using
-// the sigstore libraries. If No references are provided, vexctl will try to
-// attach it to all the attestation subjects that parse as image references.
-func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, att *attestation.Attestation, refs ...string) error {
-	env := ssldsse.Envelope{}
-
-	var b bytes.Buffer
-	if err := att.ToJSON(&b); err != nil {
-		return fmt.Errorf("getting attestation JSON")
+// Attach attaches an attestation to a container image in the registry. If no
+// references are provided, vexctl will try to attach it to all the attestation
+// subjects that parse as image references. The attestation is stored using the
+// attach method set in the options: as a sigstore bundle referring to the
+// image through the OCI referrers API (the cosign v3 layout) or as a DSSE
+// envelope in the cosign tag layout (the `.att` tag next to the image).
+func (impl *defaultVexCtlImplementation) Attach(ctx context.Context, opts Options, att *attestation.Attestation, refs ...string) error {
+	if att == nil || !att.Signed || att.Artifact == nil {
+		return errors.New("attestation must be signed before attaching it to an image")
 	}
-	decoder := json.NewDecoder(&b)
-	for decoder.More() {
-		if err := decoder.Decode(&env); err != nil {
-			return err
-		}
 
-		payload, err := json.Marshal(env)
-		if err != nil {
-			return err
-		}
+	method := opts.AttachMethod
+	if method == "" {
+		method = DefaultAttachMethod
+	}
 
-		if env.PayloadType != IntotoPayloadType {
-			return fmt.Errorf("invalid payloadType %s on envelope, expected %s", env.PayloadType, types.IntotoPayloadType)
-		}
+	// Referrers are always sigstore bundles. Attestations signed into bare
+	// envelopes can only be stored in the tag layout.
+	if method == AttachMethodReferrers && att.Artifact.Kind() != signer.ArtifactKindBundle {
+		return fmt.Errorf(
+			"attaching through the OCI referrers API requires a sigstore bundle, use the %s attach method for %s attestations",
+			AttachMethodLegacy, att.Artifact.Kind(),
+		)
+	}
 
-		if len(refs) == 0 {
-			for _, s := range att.Subject {
-				if _, err := name.ParseReference(s.Name); err != nil {
-					logrus.Infof("Skipping attaching to %s. It is not an image reference", s.Name)
-					continue
-				}
-				refs = append(refs, s.Name)
+	env, err := envelope.FromSignedArtifact(att.Artifact)
+	if err != nil {
+		return fmt.Errorf("reading signed attestation: %w", err)
+	}
+
+	if len(refs) == 0 {
+		for _, s := range att.Subject {
+			if _, err := name.ParseReference(s.Name); err != nil {
+				logrus.Infof("Skipping attaching to %s. It is not an image reference", s.Name)
+				continue
 			}
+			refs = append(refs, s.Name)
 		}
+	}
 
-		for _, ref := range refs {
-			if err := attachAttestation(ctx, att, payload, ref); err != nil {
-				return fmt.Errorf("attaching attestation to %s: %w", ref, err)
-			}
+	for _, ref := range refs {
+		if err := attachAttestation(ctx, method, env, ref); err != nil {
+			return fmt.Errorf("attaching attestation to %s: %w", ref, err)
 		}
 	}
 
 	return nil
 }
 
-// attachAttestation is a utility function to do the actual attachment of
-// the signed attestation
-func attachAttestation(ctx context.Context, original *attestation.Attestation, payload []byte, imageRef string) error {
-	regOpts := options.RegistryOptions{}
-	remoteOpts, err := regOpts.ClientOpts(ctx)
-	if err != nil {
-		return fmt.Errorf("getting OCI remote options: %w", err)
-	}
-
-	ref, err := name.ParseReference(imageRef)
+// attachAttestation stores the signed attestation envelope in the registry
+// next to the image using the collector driver matching the attach method.
+func attachAttestation(ctx context.Context, method AttachMethod, env cattestation.Envelope, imageRef string) error {
+	repo, err := imageRepository(imageRef, method)
 	if err != nil {
 		return err
 	}
 
-	digest, err := ociremote.ResolveDigest(ref, remoteOpts...)
+	agent, err := collector.New(collector.WithRepository(repo))
 	if err != nil {
-		return fmt.Errorf("resolving entity: %w", err)
+		return fmt.Errorf("creating collector agent: %w", err)
 	}
 
-	ref = digest //nolint:ineffassign
-
-	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
-
-	// Add the attestation certificate:
-	opts = append(opts, static.WithCertChain(original.SignatureData.CertData, original.SignatureData.Chain))
-
-	// Add the tlog entry to the annotations
-	if original.SignatureData.Entry != nil {
-		opts = append(opts, static.WithBundle(
-			cbundle.EntryToBundle(original.SignatureData.Entry),
-		))
-	}
-
-	// Add predicateType as manifest annotation
-	opts = append(opts, static.WithAnnotations(map[string]string{
-		"predicateType": vex.Context,
-	}))
-
-	att, err := static.NewAttestation(payload, opts...)
-	if err != nil {
-		return err
-	}
-
-	se, err := ociremote.SignedEntity(digest, remoteOpts...)
-	if err != nil {
-		return fmt.Errorf("creating signed entity from image: %w", err)
-	}
-
-	newSE, err := mutate.AttachAttestationToEntity(se, att)
-	if err != nil {
-		return fmt.Errorf("attaching attestation: %w", err)
-	}
-
-	// Publish the signatures
-	if err := ociremote.WriteAttestations(digest.Repository, newSE, remoteOpts...); err != nil {
-		return fmt.Errorf("writing attestations to registry: %w", err)
+	if err := agent.Store(ctx, []cattestation.Envelope{env}); err != nil {
+		return fmt.Errorf("writing attestation to registry: %w", err)
 	}
 	return nil
+}
+
+// imageRepository returns a collector repository that reads and writes the
+// attestations attached to an image using the specified method.
+func imageRepository(imageRef string, method AttachMethod) (cattestation.Repository, error) {
+	ref, err := name.ParseReference(imageRef)
+	if err != nil {
+		return nil, fmt.Errorf("parsing image reference: %w", err)
+	}
+
+	switch method {
+	case AttachMethodLegacy:
+		repo, err := coci.New(
+			coci.WithReference(imageRef),
+			coci.WithReadSignatures(false),
+			coci.WithReadSBOMs(false),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("creating %s image repository: %w", method, err)
+		}
+		return repo, nil
+	case AttachMethodReferrers:
+		regOpts := []regclient.Opt{regclient.WithDockerCreds(), regclient.WithDockerCerts()}
+		// Talk to local and private network registries over plain HTTP, as
+		// the legacy method and the docker tooling do.
+		if registry := ref.Context().Registry; registry.Scheme() == "http" {
+			regOpts = append(regOpts, regclient.WithConfigHost(config.Host{
+				Name: registry.RegistryStr(),
+				TLS:  config.TLSDisabled,
+			}))
+		}
+		repo, err := oci.New(oci.WithReference(imageRef), oci.WithRegClientOpts(regOpts...))
+		if err != nil {
+			return nil, fmt.Errorf("creating %s image repository: %w", method, err)
+		}
+		return repo, nil
+	default:
+		return nil, fmt.Errorf("unknown attach method %q", method)
+	}
 }
 
 // SourceType returns a string indicating what kind of vex
@@ -307,63 +309,81 @@ func (impl *defaultVexCtlImplementation) SourceType(uri string) (string, error) 
 	return "", errors.New("unable to resolve the vex source location")
 }
 
-// DownloadAttestation
+// openvexPredicateTypes are the predicate types of OpenVEX attestations.
+var openvexPredicateTypes = []cattestation.PredicateType{
+	gvattestation.PredicateType,
+	cattestation.PredicateType(vex.TypeURI),
+}
+
+// ReadImageAttestations reads the OpenVEX documents from the attestations
+// attached to a container image. Attestations attached through the OCI
+// referrers API and in the cosign tag layout are both read.
 func (impl *defaultVexCtlImplementation) ReadImageAttestations(
 	ctx context.Context, _ Options, refString string,
 ) (vexes []*vex.VEX, err error) {
-	// Parsae the image reference
-	ref, err := name.ParseReference(refString)
-	if err != nil {
-		return nil, fmt.Errorf("parsing image reference: %w", err)
-	}
-	regOpts := &options.RegistryOptions{}
-	remoteOpts, err := regOpts.ClientOpts(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting OCI remote options: %w", err)
-	}
-	payloads, err := cosign.FetchAttestationsForReference(ctx, ref, "", remoteOpts...)
-	if err != nil {
-		return nil, fmt.Errorf("fetching attached attestation: %w", err)
-	}
-	vexes = []*vex.VEX{}
-	for _, dssePayload := range payloads {
-		vexData, err := impl.ReadSignedVEX(dssePayload)
+	initFuncs := []collector.InitFunction{}
+	for _, method := range []AttachMethod{AttachMethodReferrers, AttachMethodLegacy} {
+		repo, err := imageRepository(refString, method)
 		if err != nil {
-			return nil, fmt.Errorf("opening dsse payload: %w", err)
+			return nil, err
 		}
-		vexes = append(vexes, vexData)
+		initFuncs = append(initFuncs, collector.WithRepository(repo))
+	}
+
+	agent, err := collector.New(initFuncs...)
+	if err != nil {
+		return nil, fmt.Errorf("creating collector agent: %w", err)
+	}
+
+	envs, err := agent.FetchAttestationsByPredicateType(ctx, openvexPredicateTypes)
+	if err != nil {
+		return nil, fmt.Errorf("fetching attached attestations: %w", err)
+	}
+
+	vexes = []*vex.VEX{}
+	for _, env := range envs {
+		vexData, err := vexFromEnvelope(env)
+		if err != nil {
+			return nil, fmt.Errorf("reading attestation: %w", err)
+		}
+		if vexData != nil {
+			vexes = append(vexes, vexData)
+		}
 	}
 	return vexes, nil
 }
 
-// ReadSignedVEX returns the vex data inside a signed envelope
-func (impl *defaultVexCtlImplementation) ReadSignedVEX(dssePayload cosign.AttestationPayload) (*vex.VEX, error) {
-	if dssePayload.PayloadType != IntotoPayloadType {
+// vexFromEnvelope returns the OpenVEX document in an attestation envelope or
+// nil if the envelope does not contain an OpenVEX predicate.
+func vexFromEnvelope(env cattestation.Envelope) (*vex.VEX, error) {
+	statement := env.GetStatement()
+	if statement == nil {
 		logrus.Info("Signed envelope does not contain an in-toto attestation")
 		return nil, nil
 	}
 
-	data, err := base64.StdEncoding.DecodeString(dssePayload.PayLoad)
-	if err != nil {
-		return nil, fmt.Errorf("decoding signed attestation: %w", err)
-	}
-	fmt.Printf("%s\n", string(data))
-
-	// Unmarshall the attestation
-	att := &attestation.Attestation{}
-	if err := json.Unmarshal(data, att); err != nil {
-		return nil, fmt.Errorf("unmarshalling attestation JSON: %w", err)
-	}
-
-	if att.PredicateType != vex.TypeURI {
+	predicate := statement.GetPredicate()
+	if predicate == nil || !slices.Contains(openvexPredicateTypes, predicate.GetType()) {
 		return nil, nil
 	}
 
-	doc, ok := att.Predicate.GetParsed().(vex.VEX)
-	if !ok {
-		return nil, errors.New("unable to read predicata data as openvex")
+	switch doc := predicate.GetParsed().(type) {
+	case *vex.VEX:
+		return doc, nil
+	case vex.VEX:
+		return &doc, nil
 	}
-	return &doc, nil
+
+	// The predicate was not parsed, read it from its data
+	data := predicate.GetData()
+	if len(data) == 0 {
+		return nil, errors.New("openvex predicate has no data")
+	}
+	doc, err := vex.Parse(data)
+	if err != nil {
+		return nil, fmt.Errorf("parsing openvex predicate: %w", err)
+	}
+	return doc, nil
 }
 
 type MergeOptions struct {
