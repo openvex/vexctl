@@ -90,11 +90,7 @@ type Implementation interface {
 
 type defaultVexCtlImplementation struct{}
 
-var cveRegexp regexp.Regexp
-
-func init() {
-	cveRegexp = *regexp.MustCompile(`^(CVE-\d+-\d+)`)
-}
+var cveRegexp = regexp.MustCompile(`^(CVE-\d+-\d+)`)
 
 func (impl *defaultVexCtlImplementation) SortDocuments(docs []*vex.VEX) []*vex.VEX {
 	return vex.SortDocuments(docs)
@@ -113,15 +109,18 @@ func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, ve
 		docTimestamp = *vexDoc.Timestamp
 	}
 	vex.SortStatements(sortedStatements, docTimestamp)
+	byVuln := indexStatementsByVulnerability(sortedStatements)
 
 	// Search for negative VEX statements, that is those that cancel a CVE
 	for i := range report.Runs {
-		newResults := []*gosarif.Result{}
-		logrus.Infof("Inspecting SARIF run #%d containing %d results", i, len(report.Runs[i].Results))
-		for _, res := range report.Runs[i].Results {
+		results := report.Runs[i].Results
+		newResults := make([]*gosarif.Result, 0, len(results))
+		logrus.Infof("Inspecting SARIF run #%d containing %d results", i, len(results))
+		for _, res := range results {
 			id := ""
-			parts := strings.SplitN(strings.TrimSpace(*res.RuleID), "-", 2)
-			switch parts[0] {
+			ruleID := strings.TrimSpace(*res.RuleID)
+			prefix, _, _ := strings.Cut(ruleID, "-")
+			switch prefix {
 			case "CVE":
 				// Trim rule ID to CVE as Grype adds junk to the CVE ID
 				m := cveRegexp.FindStringSubmatch(*res.RuleID)
@@ -136,25 +135,25 @@ func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, ve
 					continue
 				}
 			case "GHSA", "GO", "PRISMA", "RHSA", "RUSTSEC", "SNYK":
-				id = strings.TrimSpace(*res.RuleID)
+				id = ruleID
 			default:
 				newResults = append(newResults, res)
 				continue
 			}
 
-			statements := vexDoc.StatementsByVulnerability(id)
+			statement, ok := byVuln[id]
 
 			// OpenVEX doc has no data for this vulnerability ID
-			if len(statements) == 0 {
+			if !ok {
 				newResults = append(newResults, res)
 				continue
 			}
 
-			switch statements[0].Status {
+			switch statement.Status {
 			case vex.StatusNotAffected, vex.StatusFixed:
 				logrus.Debugf(
 					" >> found VEX statement for %s with status %q",
-					statements[0].Vulnerability, statements[0].Status,
+					statement.Vulnerability, statement.Status,
 				)
 			default:
 				newResults = append(newResults, res)
@@ -163,6 +162,32 @@ func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, ve
 		newReport.Runs[i].Results = newResults
 	}
 	return &newReport, nil
+}
+
+// indexStatementsByVulnerability returns a map from every identifier a
+// statement's vulnerability is known by (ID, name and aliases) to the first
+// statement in stmts carrying it. When stmts is sorted with SortStatements,
+// this is the same statement that vex.StatementsByVulnerability returns
+// first, without scanning and sorting the whole document for each lookup.
+func indexStatementsByVulnerability(stmts []vex.Statement) map[string]*vex.Statement {
+	byVuln := make(map[string]*vex.Statement, len(stmts))
+	add := func(id string, s *vex.Statement) {
+		if id == "" {
+			return
+		}
+		if _, seen := byVuln[id]; !seen {
+			byVuln[id] = s
+		}
+	}
+	for i := range stmts {
+		s := &stmts[i]
+		add(s.Vulnerability.ID, s)
+		add(string(s.Vulnerability.Name), s)
+		for _, alias := range s.Vulnerability.Aliases {
+			add(string(alias), s)
+		}
+	}
+	return byVuln
 }
 
 // OpenVexData returns a set of vex documents from the paths received
