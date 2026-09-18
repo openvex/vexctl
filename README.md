@@ -168,6 +168,57 @@ was `under_investigation` and then `fixed` four hours later:
 }
 ```
 
+#### Validating Documents
+
+The `vexctl validate` subcommand checks OpenVEX documents for conformance with
+the specification, whatever wrote them: another tool, a pipeline, or you. It
+matters because readers are forgiving — `vexctl`, like most consumers, ignores
+data it does not recognize, so a misspelled field name is not rejected but
+quietly dropped, and the statement ends up saying less than whoever wrote it
+meant. `validate` reports every problem it finds rather than stopping at the
+first:
+
+```console
+$ vexctl validate vex.json
+vex.json: 3 errors, 2 warnings
+  warning [iri] @id: the document @id "my-vex-doc" is not an IRI; @id fields should be globally unique identifiers such as a URL or a package URL
+  error [status] statements[0]: either justification or impact statement must be defined when using status "not_affected"
+  warning [unknown-field] statements[0].justifcation: "justifcation" is not an OpenVEX v0.2.0 field and is ignored when the document is read
+  error [purl] statements[1].products[0].@id: "pkg:not a purl" is not a valid package URL: purl is missing type or name
+  error [hash] statements[1].products[0].hashes.sha-256: a sha-256 hash is 64 hexadecimal characters long, "abc123" has 6
+
+1 document checked, 0 valid, 1 invalid (3 errors, 2 warnings)
+```
+
+Findings come in two severities. An **error** means the document breaks the
+OpenVEX spec, and tools reading it may reject it or read it differently than
+intended. A **warning** means the document parses, but carries data that is
+ignored, redundant or no longer part of the spec.
+
+Among other things, `validate` checks that the file holds a single OpenVEX
+document; that every field is one the spec defines and holds a value of the
+right type; that the document has an `@id`, an author, a timestamp and a
+version; that every statement names a vulnerability, a status and at least one
+product, and can be placed in time; that statuses, justifications, action
+statements and impact statements are used in the combinations the spec allows;
+and that package URLs parse, CPEs are well formed and hashes match the length
+of the algorithm naming them.
+
+`vexctl` exits with a non-zero status when any document has errors. Pass
+`--strict` to fail on warnings too, which is what you want in CI:
+
+```shell
+# Check every document in a directory, failing on warnings too
+vexctl validate --strict .openvex/*.json
+
+# Report the findings as JSON, for another tool to read
+vexctl validate --format=json vex.json
+```
+
+Note that `validate` checks documents written against OpenVEX v0.2.0. Documents
+declaring an older spec version are reported as such and left alone; running
+them through `vexctl merge` rewrites them in the current version.
+
 ### 2. Attesting Examples
 
 ```shell

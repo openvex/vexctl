@@ -8,7 +8,7 @@ require (
 	github.com/carabiner-dev/signer v0.6.2
 	github.com/google/go-containerregistry v0.22.1
 	github.com/in-toto/attestation v1.2.0
-	github.com/openvex/go-vex v0.2.9
+	github.com/openvex/go-vex v0.2.10-0.20260921184924-c6d860997ec4
 	github.com/owenrumney/go-sarif v1.1.1
 	github.com/package-url/packageurl-go v0.1.7
 	github.com/regclient/regclient v0.11.6
