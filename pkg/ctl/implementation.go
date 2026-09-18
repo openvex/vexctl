@@ -34,7 +34,6 @@ import (
 	"github.com/regclient/regclient"
 	"github.com/regclient/regclient/config"
 	"github.com/sirupsen/logrus"
-	"sigs.k8s.io/release-utils/helpers"
 
 	gvattestation "github.com/openvex/go-vex/pkg/attestation"
 	"github.com/openvex/go-vex/pkg/sarif"
@@ -470,7 +469,11 @@ func (impl *defaultVexCtlImplementation) Merge(
 		newDoc.AuthorRole = authorRole
 	}
 
-	ss := []vex.Statement{}
+	total := 0
+	for _, doc := range docs {
+		total += len(doc.Statements)
+	}
+	ss := make([]vex.Statement, 0, total)
 
 	// Create an inverse dict of products and vulnerabilities to filter
 	// these will only be used if ids to filter on are defined in the options.
@@ -858,7 +861,7 @@ func (impl *defaultVexCtlImplementation) ReadTemplateData(opts *GenerateOpts, pr
 
 	// The VEX options only support matching products with a string.
 	// We unpack all the product data and match on it
-	productsIdentifiers := []string{}
+	productsIdentifiers := make([]string, 0, len(products))
 	for _, p := range products {
 		productsIdentifiers = append(productsIdentifiers, p.ID)
 		for _, id := range p.Identifiers {
@@ -883,10 +886,8 @@ func (impl *defaultVexCtlImplementation) ReadTemplateData(opts *GenerateOpts, pr
 // InitTemplatesDir initializes the templates directory with an emptuy file and
 // a readme.
 func (impl *defaultVexCtlImplementation) InitTemplatesDir(path string) error {
-	if !helpers.Exists(path) {
-		if err := os.MkdirAll(path, os.FileMode(0o755)); err != nil {
-			return fmt.Errorf("creating templates dir: %s", err)
-		}
+	if err := os.MkdirAll(path, os.FileMode(0o755)); err != nil {
+		return fmt.Errorf("creating templates dir: %w", err)
 	}
 
 	entries, err := os.ReadDir(path)
