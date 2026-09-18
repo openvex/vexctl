@@ -102,8 +102,14 @@ func (vexctl *VexCtl) Apply(r *sarif.Report, vexDocs []*vex.VEX) (finalReport *s
 	return finalReport, nil
 }
 
-// Attest generates an attestation from a list of identifiers
+// Attest generates an attestation from a list of identifiers.
 func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*attestation.Attestation, error) {
+	return vexctl.AttestWithContext(context.Background(), vexDataPath, subjectStrings)
+}
+
+// AttestWithContext generates an attestation from a list of identifiers. Image
+// digests are looked up in the registry when needed; ctx bounds those lookups.
+func (vexctl *VexCtl) AttestWithContext(ctx context.Context, vexDataPath string, subjectStrings []string) (*attestation.Attestation, error) {
 	doc, err := vexctl.impl.OpenVexData(vexctl.Options, []string{vexDataPath})
 	if err != nil {
 		return nil, fmt.Errorf("opening vex data: %w", err)
@@ -112,23 +118,29 @@ func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*atte
 	// Generate the attestation
 	att := attestation.New()
 	att.Predicate = gvattestation.NewPredicate(doc[0])
-	subjects := []productRef{}
-	for _, s := range subjectStrings {
-		subjects = append(subjects, productRef{Name: s})
-	}
 
-	// If we did not get a specific list of subjects to attest, we default
-	// to the products of the VEX document.
-	if len(subjects) == 0 {
-		subjects, err = vexctl.impl.ListDocumentProducts(doc[0])
-		if err != nil {
-			return nil, fmt.Errorf("listing document products: %w", err)
-		}
+	// The image products of the document are always needed: they are the
+	// subjects when none are specified and they are checked against the
+	// attestation subjects at the end.
+	docProducts, err := vexctl.impl.ListDocumentProducts(doc[0])
+	if err != nil {
+		return nil, fmt.Errorf("listing document products: %w", err)
 	}
-
-	imageSubjects, otherSubjects, unattestableSubjects, err := vexctl.impl.NormalizeProducts(subjects)
+	docImageRefs, otherSubjects, unattestableSubjects, err := vexctl.impl.NormalizeProducts(docProducts)
 	if err != nil {
 		return nil, fmt.Errorf("normalizing VEX products to attest: %w", err)
+	}
+
+	imageSubjects := docImageRefs
+	if len(subjectStrings) > 0 {
+		subjects := make([]productRef, 0, len(subjectStrings))
+		for _, s := range subjectStrings {
+			subjects = append(subjects, productRef{Name: s})
+		}
+		imageSubjects, otherSubjects, unattestableSubjects, err = vexctl.impl.NormalizeProducts(subjects)
+		if err != nil {
+			return nil, fmt.Errorf("normalizing subjects to attest: %w", err)
+		}
 	}
 
 	if len(unattestableSubjects) != 0 {
@@ -142,15 +154,20 @@ func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*atte
 	}
 
 	// Look up the digests of the images that don't have one (eg tags)
-	imageSubjects, err = vexctl.impl.ResolveImageDigests(imageSubjects)
+	imageSubjects, err = vexctl.impl.ResolveImageDigests(ctx, imageSubjects)
 	if err != nil {
 		return nil, fmt.Errorf("resolving image digests: %w", err)
 	}
+	if len(subjectStrings) == 0 {
+		// The subjects are the document products, reuse the resolved digests
+		// when checking them below.
+		docImageRefs = imageSubjects
+	}
 
-	allSubjects := []productRef{} //nolint:prealloc
+	allSubjects := make([]productRef, 0, len(imageSubjects)+len(otherSubjects))
 	allSubjects = append(allSubjects, imageSubjects...)
 	allSubjects = append(allSubjects, otherSubjects...)
-	subs := []*intoto.ResourceDescriptor{}
+	subs := make([]*intoto.ResourceDescriptor, 0, len(allSubjects))
 	for _, sub := range allSubjects {
 		d := map[string]string{}
 		// TODO(puerco): Move this logic to the go-vex hash structs
@@ -173,7 +190,7 @@ func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*atte
 	}
 
 	// Validate subjects came from the doc
-	if err := vexctl.impl.VerifyImageSubjects(att, doc[0]); err != nil {
+	if err := vexctl.impl.VerifyImageSubjects(ctx, att, docImageRefs); err != nil {
 		return nil, fmt.Errorf("checking subjects: %w", err)
 	}
 
