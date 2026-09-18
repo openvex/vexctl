@@ -215,7 +215,7 @@ to user/test, even if the OpenVEX document has product entries for other images:
 			vexctl.Options.Sign = opts.sign
 			vexctl.Options.AttachMethod = attachMethod
 
-			att, err := vexctl.Attest(args[0], args[1:])
+			att, err := vexctl.AttestWithContext(ctx, args[0], args[1:])
 			if err != nil {
 				return fmt.Errorf("generating attestation: %w", err)
 			}

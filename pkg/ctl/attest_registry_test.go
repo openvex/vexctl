@@ -8,7 +8,6 @@ SPDX-License-Identifier: Apache-2.0
 package ctl
 
 import (
-	"context"
 	"fmt"
 	"net/http/httptest"
 	"net/url"
@@ -140,7 +139,7 @@ func TestAttestSubjectDigests(t *testing.T) {
 		{"digest purl from document", digestPurl, nil, digestRef},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			att, err := New().Attest(writeTestVEX(t, "https://openvex.dev/docs/subjects", tc.product), tc.subjects)
+			att, err := New().AttestWithContext(t.Context(), writeTestVEX(t, "https://openvex.dev/docs/subjects", tc.product), tc.subjects)
 			require.NoError(t, err)
 			require.Len(t, att.Subject, 1)
 			require.Equal(t, tc.expectedName, att.Subject[0].Name)
@@ -149,7 +148,7 @@ func TestAttestSubjectDigests(t *testing.T) {
 	}
 
 	t.Run("unknown tag fails", func(t *testing.T) {
-		_, err := New().Attest(writeTestVEX(t, "https://openvex.dev/docs/subjects", tagPurl), []string{host + "/attest/subjects:missing"})
+		_, err := New().AttestWithContext(t.Context(), writeTestVEX(t, "https://openvex.dev/docs/subjects", tagPurl), []string{host + "/attest/subjects:missing"})
 		require.Error(t, err)
 	})
 }
@@ -157,7 +156,7 @@ func TestAttestSubjectDigests(t *testing.T) {
 // TestAttestAttach attests a VEX document, attaches it to an image in the
 // test registry with each attach method and reads it back from the image.
 func TestAttestAttach(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	host := testRegistry(t)
 
 	for i, tc := range []struct {
@@ -177,7 +176,7 @@ func TestAttestAttach(t *testing.T) {
 
 			v := New()
 			v.Options.AttachMethod = tc.method
-			att, err := v.Attest(writeTestVEX(t, docID, fmt.Sprintf("pkg:oci/%s?repository_url=%s/attest/%s&tag=v1", image, host, image)), []string{ref})
+			att, err := v.AttestWithContext(t.Context(), writeTestVEX(t, docID, fmt.Sprintf("pkg:oci/%s?repository_url=%s/attest/%s&tag=v1", image, host, image)), []string{ref})
 			require.NoError(t, err)
 
 			// Sign it (no sigstore in tests) and attach it to the image
@@ -198,7 +197,7 @@ func TestAttestAttach(t *testing.T) {
 		pushTestImage(t, ref)
 		v := New()
 		v.Options.AttachMethod = AttachMethodReferrers
-		att, err := v.Attest(writeTestVEX(t, "https://openvex.dev/docs/refused", ref), []string{ref})
+		att, err := v.AttestWithContext(t.Context(), writeTestVEX(t, "https://openvex.dev/docs/refused", ref), []string{ref})
 		require.NoError(t, err)
 		att.Artifact = keySignedArtifact(t, att)
 		att.Signed = true
@@ -209,7 +208,7 @@ func TestAttestAttach(t *testing.T) {
 		ref := host + "/attest/attach-unsigned:v1"
 		pushTestImage(t, ref)
 		v := New()
-		att, err := v.Attest(writeTestVEX(t, "https://openvex.dev/docs/unsigned", ref), []string{ref})
+		att, err := v.AttestWithContext(t.Context(), writeTestVEX(t, "https://openvex.dev/docs/unsigned", ref), []string{ref})
 		require.NoError(t, err)
 		require.Error(t, v.Attach(ctx, att))
 	})

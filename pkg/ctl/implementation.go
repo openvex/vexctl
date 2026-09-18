@@ -34,6 +34,7 @@ import (
 	"github.com/regclient/regclient"
 	"github.com/regclient/regclient/config"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 
 	gvattestation "github.com/openvex/go-vex/pkg/attestation"
 	"github.com/openvex/go-vex/pkg/sarif"
@@ -81,8 +82,8 @@ type Implementation interface {
 	LoadFiles(context.Context, []string) ([]*vex.VEX, error)
 	ListDocumentProducts(doc *vex.VEX) ([]productRef, error)
 	NormalizeProducts([]productRef) ([]productRef, []productRef, []productRef, error)
-	ResolveImageDigests([]productRef) ([]productRef, error)
-	VerifyImageSubjects(*attestation.Attestation, *vex.VEX) error
+	ResolveImageDigests(context.Context, []productRef) ([]productRef, error)
+	VerifyImageSubjects(context.Context, *attestation.Attestation, *vex.VEX) error
 	ReadTemplateData(*GenerateOpts, []*vex.Product) (*vex.VEX, error)
 	InitTemplatesDir(string) error
 }
@@ -698,32 +699,44 @@ func hashFromDigest(digest string) (vex.Algorithm, vex.Hash, bool) {
 	}
 }
 
+// digestLookupConcurrency bounds the number of registry digest lookups
+// running at the same time when resolving image references.
+const digestLookupConcurrency = 8
+
 // ResolveImageDigests looks up in the registry the digests of the image
 // references that do not have one yet (eg tag references) and returns the
-// list with the hashes populated. References that already carry a hash are
-// returned untouched.
-func (impl *defaultVexCtlImplementation) ResolveImageDigests(refs []productRef) ([]productRef, error) {
-	ret := make([]productRef, 0, len(refs))
-	for _, pref := range refs {
-		if len(pref.Hashes) > 0 {
-			ret = append(ret, pref)
+// list with the hashes populated, in the same order. References that already
+// carry a hash are returned untouched. Lookups run concurrently, bounded by
+// digestLookupConcurrency, and stop at the first error.
+func (impl *defaultVexCtlImplementation) ResolveImageDigests(ctx context.Context, refs []productRef) ([]productRef, error) {
+	ret := slices.Clone(refs)
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(digestLookupConcurrency)
+	for i := range ret {
+		if len(ret[i].Hashes) > 0 {
 			continue
 		}
-
-		digest, err := crane.Digest(pref.Name, crane.WithAuthFromKeychain(authn.DefaultKeychain))
-		if err != nil {
-			return nil, fmt.Errorf("resolving digest of %s: %w", pref.Name, err)
-		}
-		algo, hash, ok := hashFromDigest(digest)
-		if !ok {
-			return nil, fmt.Errorf("unsupported digest %q for %s", digest, pref.Name)
-		}
-		if pref.Hashes == nil {
-			pref.Hashes = map[vex.Algorithm]vex.Hash{}
-		}
-		pref.Hashes[algo] = hash
-		logrus.Debugf("resolved %s to %s", pref.Name, digest)
-		ret = append(ret, pref)
+		g.Go(func() error {
+			pref := &ret[i]
+			digest, err := crane.Digest(
+				pref.Name, crane.WithContext(ctx), crane.WithAuthFromKeychain(authn.DefaultKeychain),
+			)
+			if err != nil {
+				return fmt.Errorf("resolving digest of %s: %w", pref.Name, err)
+			}
+			algo, hash, ok := hashFromDigest(digest)
+			if !ok {
+				return fmt.Errorf("unsupported digest %q for %s", digest, pref.Name)
+			}
+			// Each goroutine owns a distinct element, so this map write
+			// does not race with the others.
+			pref.Hashes = map[vex.Algorithm]vex.Hash{algo: hash}
+			logrus.Debugf("resolved %s to %s", pref.Name, digest)
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 	return ret, nil
 }
@@ -731,7 +744,7 @@ func (impl *defaultVexCtlImplementation) ResolveImageDigests(refs []productRef) 
 // VerifySubjectsPresent takes a list of references and ensures they are present
 // in the document that is being attested
 func (impl *defaultVexCtlImplementation) VerifyImageSubjects(
-	att *attestation.Attestation, doc *vex.VEX,
+	ctx context.Context, att *attestation.Attestation, doc *vex.VEX,
 ) error {
 	products, err := impl.ListDocumentProducts(doc)
 	if err != nil {
@@ -744,7 +757,7 @@ func (impl *defaultVexCtlImplementation) VerifyImageSubjects(
 	}
 
 	for _, r := range imageRefs {
-		found, err := impl.subjectsContainImage(att.Subject, r)
+		found, err := impl.subjectsContainImage(ctx, att.Subject, r)
 		if err != nil {
 			return fmt.Errorf("checking for %s in subjects: %w", r.Name, err)
 		}
@@ -760,7 +773,7 @@ func (impl *defaultVexCtlImplementation) VerifyImageSubjects(
 // when it points to the same repository and carries the same digest. The
 // product digest is looked up in the registry when the product does not
 // have one and the check cannot be resolved by name.
-func (impl *defaultVexCtlImplementation) subjectsContainImage(subjects []*intoto.ResourceDescriptor, product productRef) (bool, error) {
+func (impl *defaultVexCtlImplementation) subjectsContainImage(ctx context.Context, subjects []*intoto.ResourceDescriptor, product productRef) (bool, error) {
 	for _, sb := range subjects {
 		if sb.GetName() == product.Name {
 			return true, nil
@@ -784,7 +797,7 @@ func (impl *defaultVexCtlImplementation) subjectsContainImage(subjects []*intoto
 	}
 
 	if len(product.Hashes) == 0 {
-		resolved, err := impl.ResolveImageDigests([]productRef{product})
+		resolved, err := impl.ResolveImageDigests(ctx, []productRef{product})
 		if err != nil {
 			return false, err
 		}

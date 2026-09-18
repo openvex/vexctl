@@ -6,7 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package ctl
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -252,7 +251,7 @@ func TestVerifyImageSubjects(t *testing.T) {
 				},
 			)
 		}
-		err := impl.VerifyImageSubjects(att, &doc)
+		err := impl.VerifyImageSubjects(t.Context(), att, &doc)
 		if tc.mustErr {
 			require.Error(t, err)
 		} else {
@@ -262,7 +261,7 @@ func TestVerifyImageSubjects(t *testing.T) {
 }
 
 func TestMerge(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	doc1, err := vex.Open("testdata/v001-1.vex.json")
 	require.NoError(t, err)
 	doc2, err := vex.Open("testdata/v001-2.vex.json")
@@ -500,7 +499,7 @@ func TestResolveImageDigestsKeepsExistingHashes(t *testing.T) {
 		Hashes: map[vex.Algorithm]vex.Hash{vex.SHA256: "abc"},
 	}}
 	// References with hashes are not looked up, so no network access happens
-	got, err := impl.ResolveImageDigests(refs)
+	got, err := impl.ResolveImageDigests(t.Context(), refs)
 	require.NoError(t, err)
 	require.Equal(t, refs, got)
 }

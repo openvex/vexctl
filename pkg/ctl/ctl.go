@@ -102,8 +102,14 @@ func (vexctl *VexCtl) Apply(r *sarif.Report, vexDocs []*vex.VEX) (finalReport *s
 	return finalReport, nil
 }
 
-// Attest generates an attestation from a list of identifiers
+// Attest generates an attestation from a list of identifiers.
 func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*attestation.Attestation, error) {
+	return vexctl.AttestWithContext(context.Background(), vexDataPath, subjectStrings)
+}
+
+// AttestWithContext generates an attestation from a list of identifiers. Image
+// digests are looked up in the registry when needed; ctx bounds those lookups.
+func (vexctl *VexCtl) AttestWithContext(ctx context.Context, vexDataPath string, subjectStrings []string) (*attestation.Attestation, error) {
 	doc, err := vexctl.impl.OpenVexData(vexctl.Options, []string{vexDataPath})
 	if err != nil {
 		return nil, fmt.Errorf("opening vex data: %w", err)
@@ -142,7 +148,7 @@ func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*atte
 	}
 
 	// Look up the digests of the images that don't have one (eg tags)
-	imageSubjects, err = vexctl.impl.ResolveImageDigests(imageSubjects)
+	imageSubjects, err = vexctl.impl.ResolveImageDigests(ctx, imageSubjects)
 	if err != nil {
 		return nil, fmt.Errorf("resolving image digests: %w", err)
 	}
@@ -173,7 +179,7 @@ func (vexctl *VexCtl) Attest(vexDataPath string, subjectStrings []string) (*atte
 	}
 
 	// Validate subjects came from the doc
-	if err := vexctl.impl.VerifyImageSubjects(att, doc[0]); err != nil {
+	if err := vexctl.impl.VerifyImageSubjects(ctx, att, doc[0]); err != nil {
 		return nil, fmt.Errorf("checking subjects: %w", err)
 	}
 
