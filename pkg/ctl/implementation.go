@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -83,7 +84,7 @@ type Implementation interface {
 	ListDocumentProducts(doc *vex.VEX) ([]productRef, error)
 	NormalizeProducts([]productRef) ([]productRef, []productRef, []productRef, error)
 	ResolveImageDigests(context.Context, []productRef) ([]productRef, error)
-	VerifyImageSubjects(context.Context, *attestation.Attestation, *vex.VEX) error
+	VerifyImageSubjects(context.Context, *attestation.Attestation, []productRef) error
 	ReadTemplateData(*GenerateOpts, []*vex.Product) (*vex.VEX, error)
 	InitTemplatesDir(string) error
 }
@@ -553,38 +554,34 @@ func (impl *defaultVexCtlImplementation) ListDocumentProducts(doc *vex.VEX) ([]p
 	if doc == nil {
 		return nil, errors.New("cannot read subjects, vex document is nil")
 	}
+	// The hash maps are cloned so that callers resolving digests into the
+	// returned references do not modify the document's own products.
 	inv := map[string]map[vex.Algorithm]vex.Hash{}
-	products := []productRef{}
 	for i := range doc.Statements {
 		for _, p := range doc.Statements[i].Products {
 			switch {
 			case p.ID != "":
-				inv[p.ID] = p.Hashes
+				inv[p.ID] = maps.Clone(p.Hashes)
 			case len(p.Identifiers) > 0:
 				if i, ok := p.Identifiers[vex.PURL]; ok {
-					inv[i] = p.Hashes
+					inv[i] = maps.Clone(p.Hashes)
 					continue
 				}
 				for _, id := range p.Identifiers {
-					inv[id] = p.Hashes
+					inv[id] = maps.Clone(p.Hashes)
 				}
 			case len(p.Hashes) > 0:
 				for _, hash := range p.Hashes {
-					inv[string(hash)] = p.Hashes
-					continue
+					inv[string(hash)] = maps.Clone(p.Hashes)
 				}
 			}
 		}
 	}
 
 	// Sort the identifier list to make the return value deterministic
-	ids := []string{}
-	for id := range inv {
-		ids = append(ids, id)
-	}
+	ids := slices.Sorted(maps.Keys(inv))
 
-	sort.Strings(ids)
-
+	products := make([]productRef, 0, len(ids))
 	for _, id := range ids {
 		h := inv[id]
 		if h == nil {
@@ -741,23 +738,15 @@ func (impl *defaultVexCtlImplementation) ResolveImageDigests(ctx context.Context
 	return ret, nil
 }
 
-// VerifySubjectsPresent takes a list of references and ensures they are present
-// in the document that is being attested
+// VerifyImageSubjects ensures that every image reference in imageRefs, the
+// normalized image products of the document being attested, is present in
+// the attestation subjects.
 func (impl *defaultVexCtlImplementation) VerifyImageSubjects(
-	ctx context.Context, att *attestation.Attestation, doc *vex.VEX,
+	ctx context.Context, att *attestation.Attestation, imageRefs []productRef,
 ) error {
-	products, err := impl.ListDocumentProducts(doc)
-	if err != nil {
-		return fmt.Errorf("listing products in the document: %w", err)
-	}
-
-	imageRefs, _, _, err := impl.NormalizeProducts(products)
-	if err != nil {
-		return fmt.Errorf("normalizing references: %s", err)
-	}
-
+	subjects := indexSubjects(att.Subject)
 	for _, r := range imageRefs {
-		found, err := impl.subjectsContainImage(ctx, att.Subject, r)
+		found, err := impl.subjectsContainImage(ctx, subjects, r)
 		if err != nil {
 			return fmt.Errorf("checking for %s in subjects: %w", r.Name, err)
 		}
@@ -768,16 +757,43 @@ func (impl *defaultVexCtlImplementation) VerifyImageSubjects(
 	return nil
 }
 
+// subjectIndex holds the attestation subjects indexed for the lookups done
+// when verifying that the products of a document were attested.
+type subjectIndex struct {
+	// names are the names of all subjects
+	names map[string]struct{}
+	// byRepository are the subjects that parse as image references and have
+	// digests, grouped by the repository they point to
+	byRepository map[string][]*intoto.ResourceDescriptor
+}
+
+// indexSubjects parses the subjects once so that checking each product does
+// not have to parse every subject again.
+func indexSubjects(subjects []*intoto.ResourceDescriptor) subjectIndex {
+	idx := subjectIndex{
+		names:        make(map[string]struct{}, len(subjects)),
+		byRepository: map[string][]*intoto.ResourceDescriptor{},
+	}
+	for _, sb := range subjects {
+		idx.names[sb.GetName()] = struct{}{}
+		if len(sb.GetDigest()) == 0 {
+			continue
+		}
+		if repo, ok := repositoryOfReference(sb.GetName()); ok {
+			idx.byRepository[repo] = append(idx.byRepository[repo], sb)
+		}
+	}
+	return idx
+}
+
 // subjectsContainImage checks if a product image is among the attestation
 // subjects. A subject matches when its name is the same as the product's or
 // when it points to the same repository and carries the same digest. The
 // product digest is looked up in the registry when the product does not
 // have one and the check cannot be resolved by name.
-func (impl *defaultVexCtlImplementation) subjectsContainImage(ctx context.Context, subjects []*intoto.ResourceDescriptor, product productRef) (bool, error) {
-	for _, sb := range subjects {
-		if sb.GetName() == product.Name {
-			return true, nil
-		}
+func (impl *defaultVexCtlImplementation) subjectsContainImage(ctx context.Context, subjects subjectIndex, product productRef) (bool, error) {
+	if _, ok := subjects.names[product.Name]; ok {
+		return true, nil
 	}
 
 	productRepo, ok := repositoryOfReference(product.Name)
@@ -785,13 +801,8 @@ func (impl *defaultVexCtlImplementation) subjectsContainImage(ctx context.Contex
 		return false, nil
 	}
 
-	// Collect the subjects in the same repository with digests to compare
-	candidates := []*intoto.ResourceDescriptor{}
-	for _, sb := range subjects {
-		if repo, ok := repositoryOfReference(sb.GetName()); ok && repo == productRepo && len(sb.GetDigest()) > 0 {
-			candidates = append(candidates, sb)
-		}
-	}
+	// Subjects in the same repository with digests to compare
+	candidates := subjects.byRepository[productRepo]
 	if len(candidates) == 0 {
 		return false, nil
 	}

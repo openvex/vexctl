@@ -251,7 +251,11 @@ func TestVerifyImageSubjects(t *testing.T) {
 				},
 			)
 		}
-		err := impl.VerifyImageSubjects(t.Context(), att, &doc)
+		prods, err := impl.ListDocumentProducts(&doc)
+		require.NoError(t, err)
+		imageRefs, _, _, err := impl.NormalizeProducts(prods)
+		require.NoError(t, err)
+		err = impl.VerifyImageSubjects(t.Context(), att, imageRefs)
 		if tc.mustErr {
 			require.Error(t, err)
 		} else {
