@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -30,6 +31,23 @@ func (o *filterOptions) Validate() error {
 		return errors.New("invalid vex document format (must be one of vex, cyclonedx or csaf)")
 	}
 	return nil
+}
+
+// openSarifReport reads a SARIF report from a path, or from stdin when the
+// path is "-".
+func openSarifReport(path string) (*sarif.Report, error) {
+	if path != "-" {
+		return sarif.Open(path)
+	}
+	data, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		return nil, fmt.Errorf("reading stdin: %w", err)
+	}
+	report := sarif.New()
+	if err := json.Unmarshal(data, report); err != nil {
+		return nil, fmt.Errorf("unmarshalling sarif report: %w", err)
+	}
+	return report, nil
 }
 
 func addFilter(parentCmd *cobra.Command) {
@@ -79,25 +97,11 @@ document should be VEX'ed by specifying --product=PRODUCT_ID.
 			vexctl.Options.Format = opts.reportFormat
 
 			// TODO: Autodetect piped stdin
-			reportFileName := args[0]
-			if args[0] == "-" {
-				tmp, err := os.CreateTemp("", "tmp-*.sarif.json")
-				if err != nil {
-					return fmt.Errorf("creating temp sarif file")
-				}
-				defer os.Remove(tmp.Name())
-				if _, err := io.Copy(tmp, os.Stdin); err != nil {
-					return fmt.Errorf("writing stdin: %w", err)
-				}
-				reportFileName = tmp.Name()
-			}
-
-			// Open all docs
-			report, err := sarif.Open(reportFileName)
+			report, err := openSarifReport(args[0])
 			if err != nil {
-				return fmt.Errorf("opening sarif report")
+				return fmt.Errorf("opening sarif report: %w", err)
 			}
-			vexes := []*vex.VEX{}
+			vexes := make([]*vex.VEX, 0, len(args)-1)
 			for i := 1; i < len(args); i++ {
 				doc, err := vexctl.VexFromURI(ctx, args[i])
 				if err != nil {
