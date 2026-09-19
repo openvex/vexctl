@@ -30,7 +30,7 @@ jobs:
 
       - name: Determine Go versions
         id: versions
-        uses: carabiner-dev/actions/go/versions@32587e82f960d49b36101e8c45d1956e511965d3 # v1.2.9
+        uses: carabiner-dev/actions/go/versions@d41fe10fe88deaf493ce026007da73738b9f570c # v1.3.0
 
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -66,7 +66,7 @@ jobs:
 
       - name: Generate SBOM
         id: sbom
-        uses: carabiner-dev/actions/sbom/source@32587e82f960d49b36101e8c45d1956e511965d3 # v1.2.9
+        uses: carabiner-dev/actions/sbom/source@d41fe10fe88deaf493ce026007da73738b9f570c # v1.3.0
         with:
           codebases: "golang:." # Only generate the SBOM for the main go codebase
           push-to-release: ${{ steps.tag.outputs.tag_name }}
