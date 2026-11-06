@@ -21,6 +21,9 @@ const (
 	sarifNginxSnyk    = "testdata/sarif/nginx-snyk.sarif.json"
 	sarifSampleHist   = "testdata/sarif/sample-history.json"
 	sarifSample2Vulns = "testdata/sarif/sample-2vulns.json"
+
+	sarifSampleHistAffected = "testdata/sarif/sample-history-affected.json"
+	sarifSampleHistResolved = "testdata/sarif/sample-history-resolved.json"
 )
 
 func TestVexReport(t *testing.T) {
@@ -47,6 +50,18 @@ func TestVexReport(t *testing.T) {
 		{sarifSample2Vulns, 2, sarifNginxGrype, 1, 99, 96},
 		{sarifSample2Vulns, 2, sarifNginxTrivy, 1, 99, 96},
 		{sarifSample2Vulns, 2, sarifNginxSnyk, 2, 65, 63},
+
+		// The latest statement wins: a later "affected" statement overrides
+		// an earlier "not_affected" one, so nothing is filtered
+		{sarifSampleHistAffected, 2, sarifNginxGrype, 1, 99, 99},
+		{sarifSampleHistAffected, 2, sarifNginxTrivy, 1, 99, 99},
+		{sarifSampleHistAffected, 2, sarifNginxSnyk, 2, 65, 65},
+
+		// A later "not_affected" statement overrides an earlier
+		// "under_investigation" one, whatever their order in the document
+		{sarifSampleHistResolved, 2, sarifNginxGrype, 1, 99, 98},
+		{sarifSampleHistResolved, 2, sarifNginxTrivy, 1, 99, 98},
+		{sarifSampleHistResolved, 2, sarifNginxSnyk, 2, 65, 64},
 	} {
 		vexDoc, err := vex.Open(tc.vexDoc)
 		require.NoError(t, err)
