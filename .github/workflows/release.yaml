@@ -30,7 +30,7 @@ jobs:
 
       - name: Determine Go versions
         id: versions
-        uses: carabiner-dev/actions/go/versions@63d43b57262e65927864c8f7ca0a6a8efe06acc0 # v1.3.1
+        uses: carabiner-dev/actions/go/versions@2f56fd66c5ef961f72bca3dbacbbfbd9acc717ee # v1.3.2
 
       - name: Set up Go
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
@@ -40,7 +40,7 @@ jobs:
           cache: false
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+        uses: sigstore/cosign-installer@881c63bd87e38389154debd8331404ce7ca8a3ab # v4.1.4
 
       - uses: ko-build/setup-ko@61b4d1d396f5b2e7d6bb6fefdce3dc38d1a13445 # v0.10
 
@@ -66,7 +66,7 @@ jobs:
 
       - name: Generate SBOM
         id: sbom
-        uses: carabiner-dev/actions/sbom/source@63d43b57262e65927864c8f7ca0a6a8efe06acc0 # v1.3.1
+        uses: carabiner-dev/actions/sbom/source@2f56fd66c5ef961f72bca3dbacbbfbd9acc717ee # v1.3.2
         with:
           codebases: "golang:." # Only generate the SBOM for the main go codebase
           push-to-release: ${{ steps.tag.outputs.tag_name }}
