@@ -110,7 +110,7 @@ func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, ve
 		docTimestamp = *vexDoc.Timestamp
 	}
 	vex.SortStatements(sortedStatements, docTimestamp)
-	byVuln := indexStatementsByVulnerability(sortedStatements)
+	byVuln := indexStatementsByVulnerability(sortedStatements, docTimestamp)
 
 	// Search for negative VEX statements, that is those that cancel a CVE
 	for i := range report.Runs {
@@ -166,19 +166,27 @@ func (impl *defaultVexCtlImplementation) ApplySingleVEX(report *sarif.Report, ve
 }
 
 // indexStatementsByVulnerability returns a map from every identifier a
-// statement's vulnerability is known by (ID, name and aliases) to the first
-// statement in stmts carrying it. When stmts is sorted with SortStatements,
-// this is the same statement that vex.StatementsByVulnerability returns
-// first, without scanning and sorting the whole document for each lookup.
-func indexStatementsByVulnerability(stmts []vex.Statement) map[string]*vex.Statement {
+// statement's vulnerability is known by (ID, name and aliases) to the latest
+// statement in stmts carrying it. Statements without a timestamp inherit
+// docTimestamp. When two statements have the same timestamp, the one that
+// comes later in stmts wins, so the statuses are replayed in order and the
+// most recent one is the one that applies.
+func indexStatementsByVulnerability(stmts []vex.Statement, docTimestamp time.Time) map[string]*vex.Statement {
 	byVuln := make(map[string]*vex.Statement, len(stmts))
+	timestampOf := func(s *vex.Statement) time.Time {
+		if s.Timestamp == nil || s.Timestamp.IsZero() {
+			return docTimestamp
+		}
+		return *s.Timestamp
+	}
 	add := func(id string, s *vex.Statement) {
 		if id == "" {
 			return
 		}
-		if _, seen := byVuln[id]; !seen {
-			byVuln[id] = s
+		if prev, seen := byVuln[id]; seen && timestampOf(prev).After(timestampOf(s)) {
+			return
 		}
+		byVuln[id] = s
 	}
 	for i := range stmts {
 		s := &stmts[i]
